@@ -7,244 +7,258 @@ const os = require('os');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: '*' },
-    pingInterval: 10000,
-    pingTimeout: 5000,
+  cors: { origin: '*' },
+  maxHttpBufferSize: 10e6 // 10MB for image uploads
 });
 
-app.set('trust proxy', true);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ===== CLIENT TRACKING =====
-const clients = { display: new Set(), remote: new Set() };
-
-function getClientCounts() {
-    return {
-        displays: clients.display.size,
-        remotes: clients.remote.size,
-        total: clients.display.size + clients.remote.size,
-    };
-}
-
-function broadcastClients() {
-    io.emit('clients', getClientCounts());
-}
-
-// ===== SHARED TIMER STATE =====
+// Shared state
 let state = {
-    mode: 'countdown',
-    status: 'stopped',
-    totalSeconds: 300,
-    remainingSeconds: 300,
-    targetTime: null,
-    theme: 'cosmic',
-    eventName: '',
-    countdownInput: { h: 0, m: 5, s: 0 },
-    targetInput: { h: 17, m: 0 },
+  // Timer
+  timerEndTime: null,       // ISO string or null
+  timerRunning: false,
+  timerPaused: false,
+  timerPausedRemaining: 0,  // ms remaining when paused
+  timerDuration: 0,         // total duration in ms
+
+  // Display
+  background: 'bg-dark-gradient',
+  customBgColor1: '#0a0a2e',
+  customBgColor2: '#1a1a4e',
+
+  // Timer style
+  timerColor: '#00ff88',
+  timerWarningColor: '#ff6b35',
+  timerDangerColor: '#ff0040',
+  warningThreshold: 300,    // seconds - when to show warning (5 min)
+  dangerThreshold: 60,      // seconds - when to show danger (1 min)
+
+  // Announcements
+  announcement: null,       // { text, textColor, bgColor, duration, fontSize }
+
+  // Finish message
+  finishMessage: '⏰ CZAS MINĄŁ!',
+  finishImage: null,        // base64 image
+  timerFinished: false,
+
+  // Sounds
+  soundEnabled: true,
+  warningSound: true,
+  finishSound: true,
+  tickSound: false,
+
+  // Custom image overlay
+  overlayImage: null,
+  overlayPosition: 'top-right', // top-left, top-right, bottom-left, bottom-right, center
+  overlaySize: 150,
 };
 
-let tickInterval = null;
+let displays = new Set();
+let remotes = new Set();
 
-function broadcastState() {
-    io.emit('state', state);
-}
-
-function startTicking() {
-    stopTicking();
-    tickInterval = setInterval(() => {
-        if (state.status !== 'running') return;
-
-        if (state.mode === 'target' && state.targetTime) {
-            const diff = Math.floor((new Date(state.targetTime) - Date.now()) / 1000);
-            state.remainingSeconds = Math.max(0, diff);
-        } else {
-            state.remainingSeconds = Math.max(0, state.remainingSeconds - 1);
-        }
-
-        if (state.remainingSeconds <= 0) {
-            state.status = 'finished';
-            state.remainingSeconds = 0;
-            stopTicking();
-        }
-
-        broadcastState();
-    }, 1000);
-}
-
-function stopTicking() {
-    if (tickInterval) {
-        clearInterval(tickInterval);
-        tickInterval = null;
+function getNetworkIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
     }
+  }
+  return 'localhost';
 }
 
-// ===== HEALTH CHECK =====
-app.get('/status', (req, res) => {
-    const c = getClientCounts();
-    res.json({
-        ok: true,
-        timer: {
-            status: state.status,
-            mode: state.mode,
-            remainingSeconds: state.remainingSeconds,
-            eventName: state.eventName,
-        },
-        clients: c,
-        uptime: Math.floor(process.uptime()),
-    });
-});
-
-// ===== SOCKET.IO =====
 io.on('connection', (socket) => {
-    const role = socket.handshake.query.role || 'unknown';
-    const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-    console.log(`[+] ${role} connected: ${socket.id} (${ip})`);
+  socket.on('register', (role) => {
+    if (role === 'display') {
+      displays.add(socket.id);
+      socket.role = 'display';
+    } else {
+      remotes.add(socket.id);
+      socket.role = 'remote';
+    }
+    // Send current state
+    socket.emit('state-sync', state);
+  });
 
-    // track client
-    if (role === 'display') clients.display.add(socket.id);
-    else if (role === 'remote') clients.remote.add(socket.id);
+  // Timer controls
+  socket.on('start-timer', (data) => {
+    const { hours, minutes, seconds } = data;
+    const totalMs = ((hours || 0) * 3600 + (minutes || 0) * 60 + (seconds || 0)) * 1000;
+    state.timerDuration = totalMs;
+    state.timerEndTime = new Date(Date.now() + totalMs).toISOString();
+    state.timerRunning = true;
+    state.timerPaused = false;
+    state.timerFinished = false;
+    io.emit('state-sync', state);
+  });
 
-    // send current state + client counts
-    socket.emit('state', state);
-    broadcastClients();
+  socket.on('start-timer-until', (data) => {
+    const { targetHour, targetMinute } = data;
+    const now = new Date();
+    const target = new Date();
+    target.setHours(targetHour, targetMinute, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const totalMs = target - now;
+    state.timerDuration = totalMs;
+    state.timerEndTime = target.toISOString();
+    state.timerRunning = true;
+    state.timerPaused = false;
+    state.timerFinished = false;
+    io.emit('state-sync', state);
+  });
 
-    // ---- COMMANDS FROM REMOTE ----
-    socket.on('cmd:start', () => {
-        if (state.status === 'running') return;
+  socket.on('pause-timer', () => {
+    if (state.timerRunning && !state.timerPaused) {
+      const remaining = new Date(state.timerEndTime) - Date.now();
+      state.timerPausedRemaining = Math.max(0, remaining);
+      state.timerPaused = true;
+      io.emit('state-sync', state);
+    }
+  });
 
-        if (state.status === 'stopped' || state.status === 'finished') {
-            if (state.mode === 'countdown') {
-                const { h, m, s } = state.countdownInput;
-                state.totalSeconds = h * 3600 + m * 60 + s;
-                state.remainingSeconds = state.totalSeconds;
-            } else {
-                const { h, m } = state.targetInput;
-                const now = new Date();
-                const target = new Date(now);
-                target.setHours(h, m, 0, 0);
-                if (target <= now) target.setDate(target.getDate() + 1);
-                state.targetTime = target.toISOString();
-                state.totalSeconds = Math.floor((target - now) / 1000);
-                state.remainingSeconds = state.totalSeconds;
-            }
-            if (state.totalSeconds <= 0) return;
+  socket.on('resume-timer', () => {
+    if (state.timerRunning && state.timerPaused) {
+      state.timerEndTime = new Date(Date.now() + state.timerPausedRemaining).toISOString();
+      state.timerPaused = false;
+      io.emit('state-sync', state);
+    }
+  });
+
+  socket.on('stop-timer', () => {
+    state.timerRunning = false;
+    state.timerPaused = false;
+    state.timerEndTime = null;
+    state.timerFinished = false;
+    io.emit('state-sync', state);
+  });
+
+  socket.on('add-time', (seconds) => {
+    if (state.timerRunning) {
+      if (state.timerPaused) {
+        state.timerPausedRemaining += seconds * 1000;
+      } else {
+        const newEnd = new Date(new Date(state.timerEndTime).getTime() + seconds * 1000);
+        state.timerEndTime = newEnd.toISOString();
+      }
+      state.timerFinished = false;
+      io.emit('state-sync', state);
+    }
+  });
+
+  socket.on('timer-finished', () => {
+    state.timerFinished = true;
+    state.timerRunning = false;
+    io.emit('state-sync', state);
+  });
+
+  // Display settings
+  socket.on('set-background', (bg) => {
+    state.background = bg;
+    io.emit('state-sync', state);
+  });
+
+  socket.on('set-custom-bg', (data) => {
+    state.customBgColor1 = data.color1;
+    state.customBgColor2 = data.color2;
+    state.background = 'bg-custom';
+    io.emit('state-sync', state);
+  });
+
+  socket.on('set-timer-colors', (data) => {
+    if (data.timerColor) state.timerColor = data.timerColor;
+    if (data.warningColor) state.timerWarningColor = data.warningColor;
+    if (data.dangerColor) state.timerDangerColor = data.dangerColor;
+    if (data.warningThreshold !== undefined) state.warningThreshold = data.warningThreshold;
+    if (data.dangerThreshold !== undefined) state.dangerThreshold = data.dangerThreshold;
+    io.emit('state-sync', state);
+  });
+
+  // Announcements
+  socket.on('send-announcement', (data) => {
+    state.announcement = {
+      text: data.text,
+      textColor: data.textColor || '#ffffff',
+      bgColor: data.bgColor || 'rgba(0,0,0,0.85)',
+      duration: data.duration || 10,
+      fontSize: data.fontSize || 48,
+      position: data.position || 'bottom',
+      id: Date.now()
+    };
+    io.emit('state-sync', state);
+
+    // Auto-clear after duration
+    if (data.duration && data.duration > 0) {
+      setTimeout(() => {
+        if (state.announcement && state.announcement.id === data.id) {
+          state.announcement = null;
+          io.emit('state-sync', state);
         }
+      }, (data.duration || 10) * 1000);
+    }
+  });
 
-        state.status = 'running';
-        startTicking();
-        broadcastState();
-    });
+  socket.on('clear-announcement', () => {
+    state.announcement = null;
+    io.emit('state-sync', state);
+  });
 
-    socket.on('cmd:pause', () => {
-        if (state.status !== 'running') return;
-        state.status = 'paused';
-        stopTicking();
-        broadcastState();
-    });
+  // Finish settings
+  socket.on('set-finish-message', (msg) => {
+    state.finishMessage = msg;
+    io.emit('state-sync', state);
+  });
 
-    socket.on('cmd:reset', () => {
-        state.status = 'stopped';
-        stopTicking();
+  socket.on('set-finish-image', (imgData) => {
+    state.finishImage = imgData;
+    io.emit('state-sync', state);
+  });
 
-        if (state.mode === 'countdown') {
-            const { h, m, s } = state.countdownInput;
-            state.totalSeconds = h * 3600 + m * 60 + s;
-            state.remainingSeconds = state.totalSeconds;
-        } else {
-            state.remainingSeconds = 0;
-            state.totalSeconds = 0;
-        }
-        state.targetTime = null;
-        broadcastState();
-    });
+  // Overlay image
+  socket.on('set-overlay-image', (data) => {
+    state.overlayImage = data.image;
+    if (data.position) state.overlayPosition = data.position;
+    if (data.size) state.overlaySize = data.size;
+    io.emit('state-sync', state);
+  });
 
-    socket.on('cmd:setMode', (mode) => {
-        if (mode !== 'countdown' && mode !== 'target') return;
-        state.mode = mode;
-        state.status = 'stopped';
-        stopTicking();
-        broadcastState();
-    });
+  socket.on('remove-overlay-image', () => {
+    state.overlayImage = null;
+    io.emit('state-sync', state);
+  });
 
-    socket.on('cmd:setCountdown', ({ h, m, s }) => {
-        state.countdownInput = {
-            h: Math.max(0, Math.min(99, parseInt(h) || 0)),
-            m: Math.max(0, Math.min(59, parseInt(m) || 0)),
-            s: Math.max(0, Math.min(59, parseInt(s) || 0)),
-        };
-        if (state.status === 'stopped') {
-            state.totalSeconds = state.countdownInput.h * 3600 + state.countdownInput.m * 60 + state.countdownInput.s;
-            state.remainingSeconds = state.totalSeconds;
-        }
-        broadcastState();
-    });
+  // Sounds
+  socket.on('set-sounds', (data) => {
+    if (data.soundEnabled !== undefined) state.soundEnabled = data.soundEnabled;
+    if (data.warningSound !== undefined) state.warningSound = data.warningSound;
+    if (data.finishSound !== undefined) state.finishSound = data.finishSound;
+    if (data.tickSound !== undefined) state.tickSound = data.tickSound;
+    io.emit('state-sync', state);
+  });
 
-    socket.on('cmd:setTarget', ({ h, m }) => {
-        state.targetInput = {
-            h: Math.max(0, Math.min(23, parseInt(h) || 0)),
-            m: Math.max(0, Math.min(59, parseInt(m) || 0)),
-        };
-        broadcastState();
-    });
+  // Reset finished state
+  socket.on('reset-finish', () => {
+    state.timerFinished = false;
+    io.emit('state-sync', state);
+  });
 
-    socket.on('cmd:setTheme', (theme) => {
-        state.theme = theme;
-        broadcastState();
-    });
-
-    socket.on('cmd:setEvent', (name) => {
-        state.eventName = String(name).slice(0, 100);
-        broadcastState();
-    });
-
-    socket.on('cmd:addTime', (seconds) => {
-        const delta = parseInt(seconds) || 0;
-        if (state.status === 'running' || state.status === 'paused') {
-            state.remainingSeconds = Math.max(0, state.remainingSeconds + delta);
-            state.totalSeconds = Math.max(state.totalSeconds, state.remainingSeconds);
-            if (state.mode === 'target' && state.targetTime) {
-                state.targetTime = new Date(Date.now() + state.remainingSeconds * 1000).toISOString();
-            }
-        }
-        broadcastState();
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`[-] ${role} disconnected: ${socket.id} (${ip})`);
-        clients.display.delete(socket.id);
-        clients.remote.delete(socket.id);
-        broadcastClients();
-    });
+  socket.on('disconnect', () => {
+    displays.delete(socket.id);
+    remotes.delete(socket.id);
+  });
 });
 
-// ===== START =====
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('='.repeat(50));
-    console.log('  HACKATHON TIMER');
-    console.log('='.repeat(50));
-    console.log('');
-    console.log(`  Projektor (display):  http://localhost:${PORT}/`);
-    console.log(`  Pilot (remote):       http://localhost:${PORT}/remote.html`);
-    console.log(`  Status (health):      http://localhost:${PORT}/status`);
-    console.log('');
+const IP = getNetworkIP();
 
-    const nets = os.networkInterfaces();
-    const lanIps = [];
-    for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
-            if (net.family === 'IPv4' && !net.internal) {
-                lanIps.push(net.address);
-            }
-        }
-    }
-    if (lanIps.length > 0) {
-        console.log('  Adresy sieciowe:');
-        lanIps.forEach(ip => {
-            console.log(`    http://${ip}:${PORT}/remote.html`);
-        });
-    }
-    console.log('');
-    console.log('='.repeat(50));
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('');
+  console.log('🎯 Hackathon Timer Server');
+  console.log('========================');
+  console.log(`📺 Ekran projektora: http://${IP}:${PORT}/display.html`);
+  console.log(`🎮 Pilot (remote):   http://${IP}:${PORT}/remote.html`);
+  console.log(`📡 Lokalnie:         http://localhost:${PORT}`);
+  console.log('========================');
+  console.log('');
 });

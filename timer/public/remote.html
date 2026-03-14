@@ -1,641 +1,945 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Timer - Pilot</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hackathon Timer - Pilot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #00ff88;
+    --bg: #0a0a1a;
+    --card: #12122a;
+    --card-border: #1e1e3a;
+    --text: #e0e0ff;
+    --text-muted: #8888aa;
+    --danger: #ff0040;
+    --warning: #ff6b35;
+    --success: #00ff88;
+    --accent: #7c3aed;
+  }
 
-        body {
-            min-height: 100vh;
-            font-family: 'Outfit', sans-serif;
-            background: #0e0e14;
-            color: #fff;
-            padding: 0;
-            -webkit-user-select: none;
-            user-select: none;
-        }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* header */
-        .header {
-            padding: 1rem;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            background: rgba(0,0,0,0.3);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
 
-        .header h1 {
-            font-size: 1rem;
-            font-weight: 600;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.6);
-        }
+  /* === HEADER === */
+  .header {
+    background: linear-gradient(135deg, #12122a, #1e1e3a);
+    border-bottom: 1px solid var(--card-border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse 2s ease infinite;
+  }
+  .status-dot.disconnected { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        .conn-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.4);
-            margin-top: 0.3rem;
-        }
+  /* === PREVIEW === */
+  .preview-container {
+    margin: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--card-border);
+    position: relative;
+    aspect-ratio: 16/9;
+    background: #000;
+  }
+  .preview-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    pointer-events: none;
+    transform-origin: top left;
+  }
+  .preview-label {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.7);
+    color: var(--primary);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
 
-        .conn-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #ef4444;
-            transition: background 0.3s;
-        }
-        .conn-dot.ok { background: #34d399; }
+  /* === SECTIONS === */
+  .section {
+    margin: 12px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    font-size: 15px;
+    border-bottom: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.02);
+  }
+  .section-header .icon { font-size: 18px; }
+  .section-header .arrow { margin-left: auto; transition: transform 0.3s; font-size: 12px; }
+  .section-header.collapsed .arrow { transform: rotate(-90deg); }
+  .section-body { padding: 16px; }
+  .section-body.collapsed { display: none; }
 
-        /* sections */
-        .section {
-            padding: 1rem 1.2rem;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-        }
+  /* === FORM ELEMENTS === */
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    margin-top: 12px;
+  }
+  label:first-child { margin-top: 0; }
 
-        .section-title {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            color: rgba(255,255,255,0.3);
-            margin-bottom: 0.8rem;
-        }
+  input[type="number"], input[type="text"], input[type="color"], select, textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary);
+  }
+  textarea { resize: vertical; min-height: 60px; }
 
-        /* preview mini timer */
-        .preview {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 16px;
-            padding: 1rem;
-            text-align: center;
-            margin-bottom: 0.5rem;
-        }
+  input[type="color"] {
+    height: 44px;
+    padding: 4px;
+    cursor: pointer;
+  }
 
-        .preview-time {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 2.8rem;
-            font-weight: 700;
-            background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            line-height: 1;
-        }
+  input[type="range"] {
+    width: 100%;
+    margin: 8px 0;
+    accent-color: var(--primary);
+  }
 
-        .preview-time.urgent { -webkit-text-fill-color: #ef4444; }
-        .preview-time.warning { -webkit-text-fill-color: #f59e0b; }
-        .preview-time.finished { -webkit-text-fill-color: #34d399; }
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .btn:active { transform: scale(0.95); }
 
-        .preview-status {
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.35);
-            margin-top: 0.3rem;
-            letter-spacing: 0.1em;
-        }
+  .btn-primary {
+    background: var(--primary);
+    color: #000;
+  }
+  .btn-primary:hover { box-shadow: 0 0 20px rgba(0,255,136,0.3); }
 
-        .preview-event {
-            font-size: 0.8rem;
-            color: rgba(255,255,255,0.5);
-            margin-bottom: 0.3rem;
-            letter-spacing: 0.1em;
-        }
+  .btn-danger {
+    background: var(--danger);
+    color: #fff;
+  }
 
-        /* progress bar */
-        .progress-bar-container {
-            width: 100%;
-            height: 6px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 3px;
-            margin-top: 0.8rem;
-            overflow: hidden;
-        }
+  .btn-warning {
+    background: var(--warning);
+    color: #000;
+  }
 
-        .progress-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
-            transition: width 0.5s ease;
-            width: 0%;
-        }
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+  }
 
-        /* mode tabs */
-        .mode-tabs {
-            display: flex;
-            gap: 0.4rem;
-            margin-bottom: 0.8rem;
-        }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
 
-        .mode-tab {
-            flex: 1;
-            padding: 0.6rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            background: rgba(255,255,255,0.03);
-            color: rgba(255,255,255,0.5);
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.3s;
-        }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn-full { width: 100%; }
+  .btn-icon { width: 44px; height: 44px; padding: 0; }
 
-        .mode-tab.active {
-            background: rgba(167,139,250,0.15);
-            border-color: rgba(167,139,250,0.4);
-            color: #a78bfa;
-        }
+  .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-group .btn { flex: 1; min-width: 0; }
 
-        /* input rows */
-        .input-row {
-            display: flex;
-            gap: 0.6rem;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 0.6rem;
-        }
+  /* === TIMER CONTROLS === */
+  .timer-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .timer-inputs input {
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 24px;
+    font-weight: 700;
+  }
 
-        .input-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.2rem;
-        }
+  .timer-target {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
 
-        .input-col label {
-            font-size: 0.55rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: rgba(255,255,255,0.3);
-        }
+  .quick-times {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .quick-times .btn {
+    font-size: 12px;
+    padding: 8px 4px;
+  }
 
-        .input-col input[type="number"],
-        .input-col input[type="text"] {
-            width: 70px;
-            padding: 0.5rem;
-            border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 10px;
-            background: rgba(255,255,255,0.05);
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.2rem;
-            text-align: center;
-            outline: none;
-        }
+  /* Current timer display in remote */
+  .remote-timer-display {
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 36px;
+    font-weight: 900;
+    padding: 16px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+    margin-bottom: 12px;
+    transition: color 0.3s;
+  }
 
-        .input-col input:focus { border-color: #a78bfa; }
+  /* === BACKGROUND GRID === */
+  .bg-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .bg-option {
+    aspect-ratio: 16/9;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .bg-option:hover { transform: scale(1.05); }
+  .bg-option.active { border-color: var(--primary); box-shadow: 0 0 12px rgba(0,255,136,0.3); }
+  .bg-option .bg-name {
+    position: absolute;
+    bottom: 2px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 8px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 3px #000;
+  }
 
-        .input-event {
-            width: 100% !important;
-            font-family: 'Outfit', sans-serif !important;
-            font-size: 0.9rem !important;
-        }
+  /* === TOGGLE === */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+  .toggle-row span { font-size: 14px; }
+  .toggle {
+    position: relative;
+    width: 44px; height: 24px;
+    cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .toggle-slider {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 24px;
+    transition: 0.3s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    top: 3px; left: 3px;
+    transition: 0.3s;
+  }
+  .toggle input:checked + .toggle-slider {
+    background: var(--primary);
+  }
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+  }
 
-        .setup-panel { display: none; }
-        .setup-panel.active { display: block; }
+  /* === COLOR PAIR === */
+  .color-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
 
-        /* preset buttons */
-        .presets {
-            display: flex;
-            gap: 0.4rem;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 0.5rem;
-        }
+  /* === FILE UPLOAD === */
+  .file-upload {
+    border: 2px dashed var(--card-border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .file-upload:hover { border-color: var(--primary); }
+  .file-upload input { display: none; }
 
-        .preset-btn {
-            padding: 0.4rem 0.8rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            background: rgba(255,255,255,0.04);
-            color: rgba(255,255,255,0.5);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+  /* === TABS === */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
-        .preset-btn:active { background: rgba(167,139,250,0.2); border-color: #a78bfa; }
+  /* === MISC === */
+  .divider {
+    height: 1px;
+    background: var(--card-border);
+    margin: 16px 0;
+  }
 
-        /* main controls */
-        .main-controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.6rem;
-        }
+  .info-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
 
-        .ctrl-btn {
-            padding: 1rem;
-            border: none;
-            border-radius: 14px;
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-            -webkit-tap-highlight-color: transparent;
-        }
+  .row { display: flex; gap: 8px; align-items: end; }
+  .row > * { flex: 1; }
 
-        .ctrl-btn:active { transform: scale(0.96); }
-
-        .btn-start {
-            background: linear-gradient(135deg, #a78bfa, #6366f1);
-            color: #fff;
-            grid-column: 1 / -1;
-            font-size: 1.1rem;
-            padding: 1.2rem;
-        }
-
-        .btn-pause {
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
-            color: #fff;
-            grid-column: 1 / -1;
-            font-size: 1.1rem;
-            padding: 1.2rem;
-        }
-
-        .btn-reset {
-            background: rgba(255,255,255,0.06);
-            color: rgba(255,255,255,0.6);
-            border: 1px solid rgba(255,255,255,0.1);
-            grid-column: 1 / -1;
-        }
-
-        /* time adjust buttons */
-        .adjust-controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 0.4rem;
-            margin-top: 0.5rem;
-        }
-
-        .adjust-btn {
-            padding: 0.7rem 0.3rem;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            background: rgba(255,255,255,0.04);
-            color: rgba(255,255,255,0.6);
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .adjust-btn:active { background: rgba(167,139,250,0.2); }
-        .adjust-btn.add { color: #34d399; border-color: rgba(52,211,153,0.15); }
-        .adjust-btn.sub { color: #ef4444; border-color: rgba(239,68,68,0.15); }
-
-        /* theme grid */
-        .theme-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 0.5rem;
-        }
-
-        .theme-btn {
-            aspect-ratio: 1;
-            border-radius: 12px;
-            border: 2px solid rgba(255,255,255,0.08);
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .theme-btn.active { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        .theme-btn:active { transform: scale(0.9); }
-
-        .theme-btn[data-theme="cosmic"]   { background: linear-gradient(135deg, #302b63, #24243e); }
-        .theme-btn[data-theme="sunset"]   { background: linear-gradient(135deg, #6b2fa0, #ff6a00); }
-        .theme-btn[data-theme="ocean"]    { background: linear-gradient(135deg, #003566, #0db39e); }
-        .theme-btn[data-theme="forest"]   { background: linear-gradient(135deg, #1b4332, #40916c); }
-        .theme-btn[data-theme="fire"]     { background: linear-gradient(135deg, #b91c1c, #f59e0b); }
-        .theme-btn[data-theme="neon"]     { background: linear-gradient(135deg, #0a0a0a, #00ff88); }
-        .theme-btn[data-theme="arctic"]   { background: linear-gradient(135deg, #1e3a5f, #a0d2db); }
-        .theme-btn[data-theme="midnight"] { background: linear-gradient(135deg, #090979, #00d4ff); }
-        .theme-btn[data-theme="cherry"]   { background: linear-gradient(135deg, #4a0028, #c2185b); }
-        .theme-btn[data-theme="matrix"]   { background: linear-gradient(135deg, #001a00, #00ff41); }
-
-        .theme-name {
-            font-size: 0.5rem;
-            text-align: center;
-            color: rgba(255,255,255,0.3);
-            margin-top: 0.2rem;
-            letter-spacing: 0.05em;
-        }
-
-        /* hide/show based on state */
-        .when-stopped { display: block; }
-        .when-running { display: none; }
-        .running .when-stopped { display: none; }
-        .running .when-running { display: block; }
-
-        .hidden { display: none !important; }
-    </style>
+  .add-time-btns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>Pilot Timera</h1>
-        <div class="conn-status">
-            <div class="conn-dot" id="connDot"></div>
-            <span id="connText">Łączenie...</span>
-        </div>
+
+<div class="header">
+  <h1>🎮 PILOT</h1>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:12px;color:var(--text-muted)" id="connectionStatus">Połączony</span>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+</div>
+
+<!-- LIVE PREVIEW -->
+<div class="preview-container">
+  <iframe id="previewFrame" src="/display.html"></iframe>
+  <span class="preview-label">📺 PODGLĄD NA ŻYWO</span>
+</div>
+
+<!-- TIMER CONTROLS -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <span class="icon">⏱</span> Timer
+    <span class="arrow">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="remote-timer-display" id="remoteTimer">00:00:00</div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this, 'tabDuration')">Odliczanie</div>
+      <div class="tab" onclick="switchTab(this, 'tabTarget')">Do godziny</div>
     </div>
 
-    <!-- PREVIEW -->
-    <div class="section">
-        <div class="section-title">Podgląd projektora</div>
-        <div class="preview">
-            <div class="preview-event" id="previewEvent"></div>
-            <div class="preview-time" id="previewTime">00:00:00</div>
-            <div class="preview-status" id="previewStatus">Zatrzymany</div>
-            <div class="progress-bar-container">
-                <div class="progress-bar-fill" id="progressBar"></div>
-            </div>
-        </div>
+    <div class="tab-content active" id="tabDuration">
+      <label>Ustaw czas (G : M : S)</label>
+      <div class="timer-inputs">
+        <input type="number" id="setHours" min="0" max="99" value="0" placeholder="GG">
+        <input type="number" id="setMinutes" min="0" max="59" value="25" placeholder="MM">
+        <input type="number" id="setSeconds" min="0" max="59" value="0" placeholder="SS">
+      </div>
+      <div class="quick-times">
+        <button class="btn btn-outline btn-sm" onclick="quickTime(0,5,0)">5 min</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(0,10,0)">10 min</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(0,15,0)">15 min</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(0,25,0)">25 min</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(0,30,0)">30 min</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(0,45,0)">45 min</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(1,0,0)">1 godz</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTime(2,0,0)">2 godz</button>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-primary btn-full" onclick="startTimer()">▶ STARTUJ TIMER</button>
+      </div>
     </div>
 
-    <!-- CONTROLS -->
-    <div class="section">
-        <div class="section-title">Sterowanie</div>
-        <div class="main-controls" id="mainControls">
-            <button class="ctrl-btn btn-start" id="btnStart" onclick="send('cmd:start')">Start</button>
-            <button class="ctrl-btn btn-pause hidden" id="btnPause" onclick="send('cmd:pause')">Pauza</button>
-            <button class="ctrl-btn btn-reset" onclick="send('cmd:reset')">Reset</button>
-        </div>
-
-        <!-- time adjustments (visible when running/paused) -->
-        <div class="adjust-controls hidden" id="adjustControls">
-            <button class="adjust-btn sub" onclick="send('cmd:addTime', -60)">-1 min</button>
-            <button class="adjust-btn sub" onclick="send('cmd:addTime', -300)">-5 min</button>
-            <button class="adjust-btn add" onclick="send('cmd:addTime', 300)">+5 min</button>
-            <button class="adjust-btn add" onclick="send('cmd:addTime', 60)">+1 min</button>
-        </div>
+    <div class="tab-content" id="tabTarget">
+      <label>Odliczaj do godziny</label>
+      <div class="timer-target">
+        <input type="number" id="targetHour" min="0" max="23" value="17" placeholder="GG">
+        <input type="number" id="targetMinute" min="0" max="59" value="0" placeholder="MM">
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-primary btn-full" onclick="startTimerUntil()">▶ ODLICZAJ DO GODZINY</button>
+      </div>
     </div>
 
-    <!-- SETUP -->
-    <div class="section" id="setupSection">
-        <div class="section-title">Ustawienia</div>
+    <div class="divider"></div>
 
-        <div class="mode-tabs">
-            <button class="mode-tab active" data-mode="countdown" onclick="setMode('countdown')">Odliczanie</button>
-            <button class="mode-tab" data-mode="target" onclick="setMode('target')">Do godziny</button>
-        </div>
-
-        <!-- countdown inputs -->
-        <div class="setup-panel active" id="panelCountdown">
-            <div class="input-row">
-                <div class="input-col">
-                    <input type="number" id="cH" min="0" max="99" value="0" onchange="sendCountdown()">
-                    <label>Godz.</label>
-                </div>
-                <div class="input-col">
-                    <input type="number" id="cM" min="0" max="59" value="5" onchange="sendCountdown()">
-                    <label>Min.</label>
-                </div>
-                <div class="input-col">
-                    <input type="number" id="cS" min="0" max="59" value="0" onchange="sendCountdown()">
-                    <label>Sek.</label>
-                </div>
-            </div>
-            <div class="presets">
-                <button class="preset-btn" onclick="setCountdownPreset(0,5,0)">5 min</button>
-                <button class="preset-btn" onclick="setCountdownPreset(0,10,0)">10 min</button>
-                <button class="preset-btn" onclick="setCountdownPreset(0,15,0)">15 min</button>
-                <button class="preset-btn" onclick="setCountdownPreset(0,30,0)">30 min</button>
-                <button class="preset-btn" onclick="setCountdownPreset(1,0,0)">1 godz</button>
-                <button class="preset-btn" onclick="setCountdownPreset(2,0,0)">2 godz</button>
-                <button class="preset-btn" onclick="setCountdownPreset(4,0,0)">4 godz</button>
-                <button class="preset-btn" onclick="setCountdownPreset(8,0,0)">8 godz</button>
-            </div>
-        </div>
-
-        <!-- target time inputs -->
-        <div class="setup-panel" id="panelTarget">
-            <div class="input-row">
-                <div class="input-col">
-                    <input type="number" id="tH" min="0" max="23" value="17" onchange="sendTarget()">
-                    <label>Godz.</label>
-                </div>
-                <div class="input-col">
-                    <input type="number" id="tM" min="0" max="59" value="0" onchange="sendTarget()">
-                    <label>Min.</label>
-                </div>
-            </div>
-            <div class="presets">
-                <button class="preset-btn" onclick="setTargetPreset(12,0)">12:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(14,0)">14:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(15,0)">15:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(16,0)">16:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(17,0)">17:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(18,0)">18:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(20,0)">20:00</button>
-                <button class="preset-btn" onclick="setTargetPreset(22,0)">22:00</button>
-            </div>
-        </div>
+    <div class="btn-group">
+      <button class="btn btn-warning" onclick="pauseTimer()" id="btnPause">⏸ PAUZA</button>
+      <button class="btn btn-primary" onclick="resumeTimer()" id="btnResume" style="display:none">▶ WZNÓW</button>
+      <button class="btn btn-danger" onclick="stopTimer()">⏹ STOP</button>
     </div>
 
-    <!-- EVENT NAME -->
-    <div class="section" id="eventSection">
-        <div class="section-title">Nazwa wydarzenia</div>
-        <div class="input-row">
-            <div class="input-col" style="width:100%">
-                <input type="text" id="eventInput" class="input-event"
-                    placeholder="np. HackKrakow 2026"
-                    oninput="send('cmd:setEvent', this.value)">
-            </div>
-        </div>
+    <label>Dodaj / odejmij czas</label>
+    <div class="add-time-btns">
+      <button class="btn btn-outline btn-sm" onclick="addTime(-60)">-1 min</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(-30)">-30s</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(-10)">-10s</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(10)">+10s</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(30)">+30s</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(60)">+1 min</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(300)">+5 min</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(600)">+10 min</button>
+      <button class="btn btn-outline btn-sm" onclick="addTime(1800)">+30 min</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIMER STYLE -->
+<div class="section">
+  <div class="section-header collapsed" onclick="toggleSection(this)">
+    <span class="icon">🎨</span> Styl timera i ostrzeżenia
+    <span class="arrow">▼</span>
+  </div>
+  <div class="section-body collapsed">
+    <label>Kolor timera (normalny)</label>
+    <input type="color" id="timerColor" value="#00ff88" onchange="updateTimerColors()">
+
+    <label>Kolor ostrzeżenia</label>
+    <input type="color" id="warningColor" value="#ff6b35" onchange="updateTimerColors()">
+
+    <label>Kolor zagrożenia</label>
+    <input type="color" id="dangerColor" value="#ff0040" onchange="updateTimerColors()">
+
+    <label>Próg ostrzeżenia (sekundy)</label>
+    <input type="number" id="warningThreshold" value="300" min="0" onchange="updateTimerColors()">
+    <div class="info-text">Kolor zmieni się gdy zostanie tyle sekund</div>
+
+    <label>Próg zagrożenia (sekundy)</label>
+    <input type="number" id="dangerThreshold" value="60" min="0" onchange="updateTimerColors()">
+    <div class="info-text">Ostatnie sekundy - miganie i alarm</div>
+
+    <div class="divider"></div>
+
+    <label>Komunikat końcowy</label>
+    <input type="text" id="finishMessage" value="⏰ CZAS MINĄŁ!" onchange="updateFinishMessage()">
+
+    <label>Obrazek końcowy</label>
+    <div class="file-upload" onclick="document.getElementById('finishImageUpload').click()">
+      📷 Kliknij aby dodać obrazek<br><small>Wyświetli się gdy czas minie</small>
+      <input type="file" id="finishImageUpload" accept="image/*" onchange="uploadFinishImage(this)">
+    </div>
+    <div id="finishImagePreview" style="margin-top:8px;display:none">
+      <img id="finishImgPrev" style="max-width:100%;border-radius:8px" />
+      <button class="btn btn-danger btn-sm" onclick="removeFinishImage()" style="margin-top:4px">Usuń obrazek</button>
     </div>
 
-    <!-- THEMES -->
-    <div class="section">
-        <div class="section-title">Motyw tła</div>
-        <div class="theme-grid">
-            <div>
-                <div class="theme-btn active" data-theme="cosmic" onclick="setTheme('cosmic')"></div>
-                <div class="theme-name">Kosmos</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="sunset" onclick="setTheme('sunset')"></div>
-                <div class="theme-name">Zachód</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="ocean" onclick="setTheme('ocean')"></div>
-                <div class="theme-name">Ocean</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="forest" onclick="setTheme('forest')"></div>
-                <div class="theme-name">Las</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="fire" onclick="setTheme('fire')"></div>
-                <div class="theme-name">Ogień</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="neon" onclick="setTheme('neon')"></div>
-                <div class="theme-name">Neon</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="arctic" onclick="setTheme('arctic')"></div>
-                <div class="theme-name">Arktyka</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="midnight" onclick="setTheme('midnight')"></div>
-                <div class="theme-name">Północ</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="cherry" onclick="setTheme('cherry')"></div>
-                <div class="theme-name">Wiśnia</div>
-            </div>
-            <div>
-                <div class="theme-btn" data-theme="matrix" onclick="setTheme('matrix')"></div>
-                <div class="theme-name">Matrix</div>
-            </div>
-        </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-outline btn-full" onclick="resetFinish()">Schowaj ekran końcowy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANNOUNCEMENTS -->
+<div class="section">
+  <div class="section-header collapsed" onclick="toggleSection(this)">
+    <span class="icon">📢</span> Komunikaty
+    <span class="arrow">▼</span>
+  </div>
+  <div class="section-body collapsed">
+    <label>Treść komunikatu</label>
+    <textarea id="announcementText" placeholder="Wpisz komunikat do wyświetlenia..."></textarea>
+
+    <div class="color-pair">
+      <div>
+        <label>Kolor tekstu</label>
+        <input type="color" id="annTextColor" value="#ffffff">
+      </div>
+      <div>
+        <label>Kolor tła</label>
+        <input type="color" id="annBgColor" value="#000000">
+      </div>
     </div>
 
-    <div style="height: 2rem"></div>
+    <label>Rozmiar tekstu: <span id="annFontSizeVal">48</span>px</label>
+    <input type="range" id="annFontSize" min="16" max="120" value="48" oninput="document.getElementById('annFontSizeVal').textContent=this.value">
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io({ query: { role: 'remote' } });
+    <label>Czas wyświetlania (sekundy, 0 = bez limitu)</label>
+    <input type="number" id="annDuration" value="10" min="0">
 
-        const previewTime = document.getElementById('previewTime');
-        const previewStatus = document.getElementById('previewStatus');
-        const previewEvent = document.getElementById('previewEvent');
-        const progressBar = document.getElementById('progressBar');
-        const btnStart = document.getElementById('btnStart');
-        const btnPause = document.getElementById('btnPause');
-        const adjustControls = document.getElementById('adjustControls');
-        const setupSection = document.getElementById('setupSection');
+    <label>Pozycja</label>
+    <select id="annPosition">
+      <option value="top">Góra ekranu</option>
+      <option value="center">Środek ekranu</option>
+      <option value="bottom" selected>Dół ekranu</option>
+    </select>
 
-        function pad(n) { return String(n).padStart(2, '0'); }
-        function send(cmd, data) { socket.emit(cmd, data); }
+    <div style="margin-top:12px" class="btn-group">
+      <button class="btn btn-accent btn-full" onclick="sendAnnouncement()">📢 WYŚLIJ</button>
+      <button class="btn btn-outline" onclick="clearAnnouncement()">✕ USUŃ</button>
+    </div>
 
-        // ===== SYNC STATE =====
-        socket.on('state', (state) => {
-            const sec = Math.max(0, state.remainingSeconds);
-            const h = Math.floor(sec / 3600);
-            const m = Math.floor((sec % 3600) / 60);
-            const s = sec % 60;
+    <div class="divider"></div>
+    <label>Szybkie komunikaty</label>
+    <div class="quick-times">
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('🔥 PREZENTACJE ZA 5 MINUT!')">Prezentacje</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('☕ PRZERWA!')">Przerwa</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('📝 ODDAJCIE PROJEKTY!')">Oddaj projekt</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('🎉 BRAWO!')">Brawo</button>
+    </div>
+  </div>
+</div>
 
-            previewTime.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-            previewTime.className = 'preview-time';
-            if (state.status === 'finished') previewTime.classList.add('finished');
-            else if (state.status === 'running' && sec <= 60) previewTime.classList.add('urgent');
-            else if (state.status === 'running' && sec <= 300) previewTime.classList.add('warning');
+<!-- BACKGROUNDS -->
+<div class="section">
+  <div class="section-header collapsed" onclick="toggleSection(this)">
+    <span class="icon">🖼</span> Tło ekranu
+    <span class="arrow">▼</span>
+  </div>
+  <div class="section-body collapsed">
+    <div class="bg-grid" id="bgGrid"></div>
 
-            // progress bar
-            const pct = state.totalSeconds > 0 ? ((state.totalSeconds - sec) / state.totalSeconds * 100) : 0;
-            progressBar.style.width = pct + '%';
+    <div class="divider"></div>
+    <label>Własne tło (gradient)</label>
+    <div class="color-pair">
+      <div>
+        <label>Kolor 1</label>
+        <input type="color" id="customBg1" value="#0a0a2e">
+      </div>
+      <div>
+        <label>Kolor 2</label>
+        <input type="color" id="customBg2" value="#1a1a4e">
+      </div>
+    </div>
+    <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="setCustomBg()">Zastosuj własne tło</button>
+  </div>
+</div>
 
-            // event name
-            previewEvent.textContent = state.eventName || '';
-            document.getElementById('eventInput').value = state.eventName || '';
+<!-- OVERLAY IMAGE -->
+<div class="section">
+  <div class="section-header collapsed" onclick="toggleSection(this)">
+    <span class="icon">🏷</span> Obrazek / logo na ekranie
+    <span class="arrow">▼</span>
+  </div>
+  <div class="section-body collapsed">
+    <div class="file-upload" onclick="document.getElementById('overlayUpload').click()">
+      📷 Kliknij aby dodać logo/obrazek<br><small>Pojawi się na ekranie projektora</small>
+      <input type="file" id="overlayUpload" accept="image/*" onchange="uploadOverlay(this)">
+    </div>
 
-            // status text
-            const statusMap = {
-                stopped: 'Zatrzymany',
-                running: state.mode === 'target'
-                    ? `Do ${pad(state.targetInput.h)}:${pad(state.targetInput.m)}`
-                    : 'Odliczanie...',
-                paused: 'PAUZA',
-                finished: 'CZAS MINĄŁ!'
-            };
-            previewStatus.textContent = statusMap[state.status] || '';
+    <label>Pozycja</label>
+    <select id="overlayPosition" onchange="updateOverlay()">
+      <option value="top-left">Lewy górny</option>
+      <option value="top-right" selected>Prawy górny</option>
+      <option value="bottom-left">Lewy dolny</option>
+      <option value="bottom-right">Prawy dolny</option>
+      <option value="center">Środek</option>
+    </select>
 
-            // buttons
-            const isActive = state.status === 'running' || state.status === 'paused';
-            btnStart.classList.toggle('hidden', state.status === 'running');
-            btnPause.classList.toggle('hidden', state.status !== 'running');
-            btnStart.textContent = state.status === 'paused' ? 'Wznów' : 'Start';
-            adjustControls.classList.toggle('hidden', !isActive);
+    <label>Rozmiar: <span id="overlaySizeVal">150</span>px</label>
+    <input type="range" id="overlaySize" min="50" max="500" value="150" oninput="document.getElementById('overlaySizeVal').textContent=this.value" onchange="updateOverlay()">
 
-            // hide setup when running
-            setupSection.style.display = isActive ? 'none' : 'block';
+    <div id="overlayPreview" style="display:none;margin-top:8px">
+      <img id="overlayPrev" style="max-width:100px;border-radius:6px" />
+      <button class="btn btn-danger btn-sm" onclick="removeOverlay()" style="margin-top:4px">Usuń</button>
+    </div>
+  </div>
+</div>
 
-            // sync mode tabs
-            document.querySelectorAll('.mode-tab').forEach(t =>
-                t.classList.toggle('active', t.dataset.mode === state.mode));
-            document.getElementById('panelCountdown').classList.toggle('active', state.mode === 'countdown');
-            document.getElementById('panelTarget').classList.toggle('active', state.mode === 'target');
+<!-- SOUNDS -->
+<div class="section">
+  <div class="section-header collapsed" onclick="toggleSection(this)">
+    <span class="icon">🔊</span> Dźwięki
+    <span class="arrow">▼</span>
+  </div>
+  <div class="section-body collapsed">
+    <div class="toggle-row">
+      <span>Dźwięki włączone</span>
+      <label class="toggle"><input type="checkbox" id="soundEnabled" checked onchange="updateSounds()"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Dźwięk ostrzeżenia</span>
+      <label class="toggle"><input type="checkbox" id="warningSound" checked onchange="updateSounds()"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Dźwięk końca czasu</span>
+      <label class="toggle"><input type="checkbox" id="finishSound" checked onchange="updateSounds()"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Tykanie (ostatnie 10s)</span>
+      <label class="toggle"><input type="checkbox" id="tickSound" onchange="updateSounds()"><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+</div>
 
-            // sync inputs (only when stopped, to avoid overwriting user typing)
-            if (state.status === 'stopped') {
-                document.getElementById('cH').value = state.countdownInput.h;
-                document.getElementById('cM').value = state.countdownInput.m;
-                document.getElementById('cS').value = state.countdownInput.s;
-                document.getElementById('tH').value = state.targetInput.h;
-                document.getElementById('tM').value = state.targetInput.m;
-            }
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  let currentState = {};
+  let overlayImageData = null;
 
-            // sync theme
-            document.querySelectorAll('.theme-btn').forEach(b =>
-                b.classList.toggle('active', b.dataset.theme === state.theme));
-        });
+  socket.emit('register', 'remote');
 
-        // ===== CONNECTION =====
-        socket.on('connect', () => {
-            document.getElementById('connDot').classList.add('ok');
-            document.getElementById('connText').textContent = 'Połączono';
-        });
-        socket.on('disconnect', () => {
-            document.getElementById('connDot').classList.remove('ok');
-            document.getElementById('connText').textContent = 'Rozłączono...';
-        });
+  socket.on('connect', () => {
+    document.getElementById('statusDot').className = 'status-dot';
+    document.getElementById('connectionStatus').textContent = 'Połączony';
+  });
+  socket.on('disconnect', () => {
+    document.getElementById('statusDot').className = 'status-dot disconnected';
+    document.getElementById('connectionStatus').textContent = 'Rozłączony';
+  });
 
-        // ===== MODE =====
-        function setMode(mode) {
-            send('cmd:setMode', mode);
-        }
+  // === BACKGROUNDS ===
+  const backgrounds = [
+    { id: 'bg-dark-gradient', name: 'Ciemny', colors: ['#0a0a2e','#1a0a3e','#0a1a3e'] },
+    { id: 'bg-cyber-purple', name: 'Cyber', colors: ['#1a002e','#3d0066','#0d0022'] },
+    { id: 'bg-ocean-deep', name: 'Ocean', colors: ['#001122','#003355','#000d1a'] },
+    { id: 'bg-fire', name: 'Ogień', colors: ['#1a0000','#4d0000','#1a0500'] },
+    { id: 'bg-matrix', name: 'Matrix', colors: ['#000a00','#001a00','#000800'] },
+    { id: 'bg-sunset', name: 'Zachód', colors: ['#1a0022','#661a00','#332200'] },
+    { id: 'bg-arctic', name: 'Arktyka', colors: ['#0a1628','#162d50','#051020'] },
+    { id: 'bg-neon-city', name: 'Neon', colors: ['#0d001a','#1a0033','#001a0d'] },
+    { id: 'bg-midnight', name: 'Północ', colors: ['#000000','#1a1a2e','#000000'] },
+    { id: 'bg-volcano', name: 'Wulkan', colors: ['#1a0500','#4d1a00','#0d0500'] },
+    { id: 'bg-aurora', name: 'Aurora', colors: ['#001a0d','#001a33','#1a0033'] },
+    { id: 'bg-galaxy', name: 'Galaktyka', colors: ['#0a001a','#000d1a','#1a000d'] },
+  ];
 
-        // ===== COUNTDOWN =====
-        function sendCountdown() {
-            send('cmd:setCountdown', {
-                h: parseInt(document.getElementById('cH').value) || 0,
-                m: parseInt(document.getElementById('cM').value) || 0,
-                s: parseInt(document.getElementById('cS').value) || 0,
-            });
-        }
+  function renderBgGrid() {
+    const grid = document.getElementById('bgGrid');
+    grid.innerHTML = '';
+    backgrounds.forEach(bg => {
+      const div = document.createElement('div');
+      div.className = 'bg-option' + (currentState.background === bg.id ? ' active' : '');
+      div.style.background = `linear-gradient(135deg, ${bg.colors.join(',')})`;
+      div.innerHTML = `<span class="bg-name">${bg.name}</span>`;
+      div.onclick = () => socket.emit('set-background', bg.id);
+      grid.appendChild(div);
+    });
+  }
 
-        function setCountdownPreset(h, m, s) {
-            document.getElementById('cH').value = h;
-            document.getElementById('cM').value = m;
-            document.getElementById('cS').value = s;
-            sendCountdown();
-        }
+  // === TIMER ===
+  function quickTime(h, m, s) {
+    document.getElementById('setHours').value = h;
+    document.getElementById('setMinutes').value = m;
+    document.getElementById('setSeconds').value = s;
+  }
 
-        // ===== TARGET =====
-        function sendTarget() {
-            send('cmd:setTarget', {
-                h: parseInt(document.getElementById('tH').value) || 0,
-                m: parseInt(document.getElementById('tM').value) || 0,
-            });
-        }
+  function startTimer() {
+    socket.emit('start-timer', {
+      hours: parseInt(document.getElementById('setHours').value) || 0,
+      minutes: parseInt(document.getElementById('setMinutes').value) || 0,
+      seconds: parseInt(document.getElementById('setSeconds').value) || 0,
+    });
+  }
 
-        function setTargetPreset(h, m) {
-            document.getElementById('tH').value = h;
-            document.getElementById('tM').value = m;
-            sendTarget();
-        }
+  function startTimerUntil() {
+    socket.emit('start-timer-until', {
+      targetHour: parseInt(document.getElementById('targetHour').value) || 0,
+      targetMinute: parseInt(document.getElementById('targetMinute').value) || 0,
+    });
+  }
 
-        // ===== THEME =====
-        function setTheme(name) {
-            send('cmd:setTheme', name);
-        }
-    </script>
+  function pauseTimer() { socket.emit('pause-timer'); }
+  function resumeTimer() { socket.emit('resume-timer'); }
+  function stopTimer() { socket.emit('stop-timer'); }
+  function addTime(sec) { socket.emit('add-time', sec); }
+
+  // === TIMER COLORS ===
+  function updateTimerColors() {
+    socket.emit('set-timer-colors', {
+      timerColor: document.getElementById('timerColor').value,
+      warningColor: document.getElementById('warningColor').value,
+      dangerColor: document.getElementById('dangerColor').value,
+      warningThreshold: parseInt(document.getElementById('warningThreshold').value) || 300,
+      dangerThreshold: parseInt(document.getElementById('dangerThreshold').value) || 60,
+    });
+  }
+
+  // === FINISH ===
+  function updateFinishMessage() {
+    socket.emit('set-finish-message', document.getElementById('finishMessage').value);
+  }
+
+  function uploadFinishImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      socket.emit('set-finish-image', e.target.result);
+      document.getElementById('finishImgPrev').src = e.target.result;
+      document.getElementById('finishImagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeFinishImage() {
+    socket.emit('set-finish-image', null);
+    document.getElementById('finishImagePreview').style.display = 'none';
+  }
+
+  function resetFinish() {
+    socket.emit('reset-finish');
+  }
+
+  // === ANNOUNCEMENTS ===
+  function sendAnnouncement() {
+    const text = document.getElementById('announcementText').value;
+    if (!text.trim()) return;
+    socket.emit('send-announcement', {
+      text: text,
+      textColor: document.getElementById('annTextColor').value,
+      bgColor: document.getElementById('annBgColor').value + 'dd',
+      fontSize: parseInt(document.getElementById('annFontSize').value) || 48,
+      duration: parseInt(document.getElementById('annDuration').value) || 0,
+      position: document.getElementById('annPosition').value,
+      id: Date.now()
+    });
+  }
+
+  function clearAnnouncement() {
+    socket.emit('clear-announcement');
+  }
+
+  function quickAnnouncement(text) {
+    document.getElementById('announcementText').value = text;
+    socket.emit('send-announcement', {
+      text: text,
+      textColor: '#ffffff',
+      bgColor: '#000000dd',
+      fontSize: 48,
+      duration: 10,
+      position: 'bottom',
+      id: Date.now()
+    });
+  }
+
+  // === BACKGROUNDS ===
+  function setCustomBg() {
+    socket.emit('set-custom-bg', {
+      color1: document.getElementById('customBg1').value,
+      color2: document.getElementById('customBg2').value,
+    });
+  }
+
+  // === OVERLAY ===
+  function uploadOverlay(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      overlayImageData = e.target.result;
+      document.getElementById('overlayPrev').src = overlayImageData;
+      document.getElementById('overlayPreview').style.display = 'block';
+      updateOverlay();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateOverlay() {
+    if (!overlayImageData) return;
+    socket.emit('set-overlay-image', {
+      image: overlayImageData,
+      position: document.getElementById('overlayPosition').value,
+      size: parseInt(document.getElementById('overlaySize').value),
+    });
+  }
+
+  function removeOverlay() {
+    overlayImageData = null;
+    socket.emit('remove-overlay-image');
+    document.getElementById('overlayPreview').style.display = 'none';
+  }
+
+  // === SOUNDS ===
+  function updateSounds() {
+    socket.emit('set-sounds', {
+      soundEnabled: document.getElementById('soundEnabled').checked,
+      warningSound: document.getElementById('warningSound').checked,
+      finishSound: document.getElementById('finishSound').checked,
+      tickSound: document.getElementById('tickSound').checked,
+    });
+  }
+
+  // === SECTIONS ===
+  function toggleSection(header) {
+    header.classList.toggle('collapsed');
+    header.nextElementSibling.classList.toggle('collapsed');
+  }
+
+  function switchTab(tab, contentId) {
+    tab.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    tab.parentElement.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(contentId).classList.add('active');
+  }
+
+  // === STATE SYNC ===
+  function formatTime(ms) {
+    if (ms <= 0) return '00:00:00';
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) {
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function updateRemoteTimer() {
+    const st = currentState;
+    const display = document.getElementById('remoteTimer');
+
+    if (st.timerFinished) {
+      display.textContent = st.finishMessage || 'CZAS MINĄŁ!';
+      display.style.color = st.timerDangerColor || '#ff0040';
+      return;
+    }
+
+    if (!st.timerRunning) {
+      display.textContent = '00:00:00';
+      display.style.color = st.timerColor || '#00ff88';
+      document.getElementById('btnPause').style.display = '';
+      document.getElementById('btnResume').style.display = 'none';
+      return;
+    }
+
+    let remaining;
+    if (st.timerPaused) {
+      remaining = st.timerPausedRemaining;
+      document.getElementById('btnPause').style.display = 'none';
+      document.getElementById('btnResume').style.display = '';
+    } else {
+      remaining = new Date(st.timerEndTime) - Date.now();
+      document.getElementById('btnPause').style.display = '';
+      document.getElementById('btnResume').style.display = 'none';
+    }
+
+    if (remaining <= 0) remaining = 0;
+    const totalSec = remaining / 1000;
+
+    let color = st.timerColor || '#00ff88';
+    if (totalSec <= (st.dangerThreshold || 60)) color = st.timerDangerColor || '#ff0040';
+    else if (totalSec <= (st.warningThreshold || 300)) color = st.timerWarningColor || '#ff6b35';
+
+    display.style.color = color;
+    display.textContent = formatTime(remaining);
+  }
+
+  socket.on('state-sync', (state) => {
+    currentState = state;
+    renderBgGrid();
+    updateRemoteTimer();
+
+    // Sync form values
+    document.getElementById('timerColor').value = state.timerColor || '#00ff88';
+    document.getElementById('warningColor').value = state.timerWarningColor || '#ff6b35';
+    document.getElementById('dangerColor').value = state.timerDangerColor || '#ff0040';
+    document.getElementById('warningThreshold').value = state.warningThreshold || 300;
+    document.getElementById('dangerThreshold').value = state.dangerThreshold || 60;
+    document.getElementById('finishMessage').value = state.finishMessage || '⏰ CZAS MINĄŁ!';
+    document.getElementById('soundEnabled').checked = state.soundEnabled !== false;
+    document.getElementById('warningSound').checked = state.warningSound !== false;
+    document.getElementById('finishSound').checked = state.finishSound !== false;
+    document.getElementById('tickSound').checked = state.tickSound === true;
+
+    if (state.finishImage) {
+      document.getElementById('finishImgPrev').src = state.finishImage;
+      document.getElementById('finishImagePreview').style.display = 'block';
+    }
+    if (state.overlayImage) {
+      overlayImageData = state.overlayImage;
+      document.getElementById('overlayPrev').src = state.overlayImage;
+      document.getElementById('overlayPreview').style.display = 'block';
+    }
+  });
+
+  // Update remote timer every 100ms
+  setInterval(updateRemoteTimer, 100);
+
+  // Init
+  renderBgGrid();
+</script>
 </body>
 </html>

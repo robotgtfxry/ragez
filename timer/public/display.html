@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hackathon Timer - Ekran</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    font-family: 'Rajdhani', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 1s ease;
+    cursor: none;
+  }
+
+  /* === BACKGROUNDS === */
+  .bg-dark-gradient { background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 50%, #0a1a3e 100%); }
+  .bg-cyber-purple { background: linear-gradient(135deg, #1a002e 0%, #3d0066 30%, #1a0044 60%, #0d0022 100%); }
+  .bg-ocean-deep { background: linear-gradient(135deg, #001122 0%, #003355 40%, #001a33 70%, #000d1a 100%); }
+  .bg-fire { background: linear-gradient(135deg, #1a0000 0%, #4d0000 30%, #330000 60%, #1a0500 100%); }
+  .bg-matrix { background: linear-gradient(180deg, #000a00 0%, #001a00 50%, #000800 100%); }
+  .bg-sunset { background: linear-gradient(135deg, #1a0022 0%, #4d0033 25%, #661a00 50%, #332200 75%, #1a1100 100%); }
+  .bg-arctic { background: linear-gradient(135deg, #0a1628 0%, #162d50 30%, #0a2040 60%, #051020 100%); }
+  .bg-neon-city { background: linear-gradient(135deg, #0d001a 0%, #1a0033 25%, #000d1a 50%, #001a0d 75%, #0d001a 100%); }
+  .bg-midnight { background: linear-gradient(135deg, #000000 0%, #0d0d1a 30%, #1a1a2e 50%, #0d0d1a 70%, #000000 100%); }
+  .bg-volcano { background: linear-gradient(135deg, #1a0500 0%, #330a00 25%, #4d1a00 50%, #1a0a00 75%, #0d0500 100%); }
+  .bg-aurora { background: linear-gradient(135deg, #001a0d 0%, #003322 25%, #001a33 50%, #0d0033 75%, #1a0033 100%); }
+  .bg-galaxy { background: linear-gradient(135deg, #0a001a 0%, #1a0033 20%, #000d1a 40%, #001a33 60%, #0d001a 80%, #1a000d 100%); }
+  .bg-custom { background: linear-gradient(135deg, var(--custom-bg1), var(--custom-bg2)); }
+
+  /* === PARTICLES === */
+  .particles {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    animation: float linear infinite;
+  }
+  @keyframes float {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+
+  /* === TIMER === */
+  .timer-container {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+  }
+
+  .timer-display {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(80px, 18vw, 280px);
+    letter-spacing: 0.05em;
+    text-shadow:
+      0 0 20px currentColor,
+      0 0 40px currentColor,
+      0 0 80px currentColor;
+    transition: color 0.5s ease;
+    line-height: 1;
+  }
+
+  .timer-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(16px, 3vw, 36px);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-top: 10px;
+    color: #ffffff;
+  }
+
+  /* === TIMER BAR === */
+  .timer-bar-container {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    z-index: 20;
+  }
+  .timer-bar {
+    height: 100%;
+    transition: width 0.5s linear, background-color 0.5s ease;
+    box-shadow: 0 0 15px currentColor;
+  }
+
+  /* === WARNING EFFECTS === */
+  .warning-pulse {
+    animation: warningPulse 1s ease-in-out infinite;
+  }
+  @keyframes warningPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .danger-flash {
+    animation: dangerFlash 0.5s ease-in-out infinite;
+  }
+  @keyframes dangerFlash {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.02); }
+  }
+
+  .warning-label {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(14px, 2.5vw, 28px);
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    padding: 10px 40px;
+    border-radius: 50px;
+    border: 2px solid;
+    z-index: 30;
+    animation: warningBlink 1s ease infinite;
+    display: none;
+  }
+  @keyframes warningBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* === FINISH SCREEN === */
+  .finish-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.9);
+    animation: finishFadeIn 0.5s ease;
+  }
+  .finish-overlay.active { display: flex; }
+  @keyframes finishFadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  .finish-message {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(40px, 10vw, 150px);
+    font-weight: 900;
+    color: #ff0040;
+    text-shadow: 0 0 30px #ff0040, 0 0 60px #ff0040, 0 0 120px #ff0040;
+    text-align: center;
+    animation: finishPulse 1.5s ease-in-out infinite;
+    padding: 0 20px;
+  }
+  @keyframes finishPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .finish-image {
+    max-width: 50vw;
+    max-height: 40vh;
+    margin-top: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 40px rgba(255,0,64,0.5);
+    display: none;
+  }
+  .finish-image.active { display: block; }
+
+  /* === ANNOUNCEMENT === */
+  .announcement-bar {
+    position: fixed;
+    left: 0; right: 0;
+    z-index: 50;
+    display: none;
+    padding: 20px 40px;
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    animation: announcementSlide 0.5s ease;
+  }
+  .announcement-bar.pos-top { top: 0; }
+  .announcement-bar.pos-center {
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+    max-width: 80%;
+    right: auto;
+  }
+  .announcement-bar.pos-bottom { bottom: 60px; }
+  .announcement-bar.active { display: block; }
+  @keyframes announcementSlide {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .announcement-bar.pos-center.active {
+    animation: announcementPop 0.5s ease;
+  }
+  @keyframes announcementPop {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* === OVERLAY IMAGE === */
+  .overlay-image {
+    position: fixed;
+    z-index: 15;
+    display: none;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+  }
+  .overlay-image.active { display: block; }
+  .overlay-image.pos-top-left { top: 20px; left: 20px; }
+  .overlay-image.pos-top-right { top: 20px; right: 20px; }
+  .overlay-image.pos-bottom-left { bottom: 20px; left: 20px; }
+  .overlay-image.pos-bottom-right { bottom: 20px; right: 20px; }
+  .overlay-image.pos-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+  /* === SCREEN FLASH FOR SOUNDS === */
+  .screen-flash {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 200;
+    opacity: 0;
+  }
+</style>
+</head>
+<body class="bg-dark-gradient">
+
+<div class="particles" id="particles"></div>
+
+<div class="timer-container">
+  <div class="timer-display" id="timerDisplay">00:00:00</div>
+  <div class="timer-label" id="timerLabel">HACKATHON TIMER</div>
+</div>
+
+<div class="timer-bar-container">
+  <div class="timer-bar" id="timerBar" style="width:100%"></div>
+</div>
+
+<div class="warning-label" id="warningLabel">⚠ CZAS SIĘ KOŃCZY ⚠</div>
+
+<div class="finish-overlay" id="finishOverlay">
+  <div class="finish-message" id="finishMessage">⏰ CZAS MINĄŁ!</div>
+  <img class="finish-image" id="finishImage" src="" alt="">
+</div>
+
+<div class="announcement-bar" id="announcementBar"></div>
+
+<img class="overlay-image" id="overlayImage" src="" alt="">
+
+<div class="screen-flash" id="screenFlash"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  socket.emit('register', 'display');
+
+  let currentState = {};
+  let announcementTimeout = null;
+  let warningPlayed = false;
+  let dangerPlayed = false;
+  let finishPlayed = false;
+
+  // Audio context for sounds
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    return audioCtx;
+  }
+
+  function playBeep(freq, duration, type = 'sine', volume = 0.3) {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  function playWarningSound() {
+    playBeep(800, 0.3, 'square', 0.2);
+    setTimeout(() => playBeep(600, 0.3, 'square', 0.2), 350);
+    setTimeout(() => playBeep(800, 0.3, 'square', 0.2), 700);
+  }
+
+  function playFinishSound() {
+    const freqs = [523, 659, 784, 1047, 784, 659, 523];
+    freqs.forEach((f, i) => {
+      setTimeout(() => playBeep(f, 0.4, 'square', 0.3), i * 200);
+    });
+    // Also a big alarm
+    setTimeout(() => {
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => playBeep(880, 0.15, 'sawtooth', 0.4), i * 250);
+        setTimeout(() => playBeep(440, 0.15, 'sawtooth', 0.4), i * 250 + 125);
+      }
+    }, 1500);
+  }
+
+  function playTickSound() {
+    playBeep(1200, 0.05, 'sine', 0.1);
+  }
+
+  // Create particles
+  function createParticles() {
+    const container = document.getElementById('particles');
+    container.innerHTML = '';
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = Math.random() * 4 + 1;
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+      p.style.animationDelay = (Math.random() * 15) + 's';
+      container.appendChild(p);
+    }
+  }
+  createParticles();
+
+  function formatTime(ms) {
+    if (ms <= 0) return '00:00:00';
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) {
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function updateDisplay() {
+    const st = currentState;
+    const display = document.getElementById('timerDisplay');
+    const bar = document.getElementById('timerBar');
+    const warning = document.getElementById('warningLabel');
+    const finish = document.getElementById('finishOverlay');
+    const finishMsg = document.getElementById('finishMessage');
+    const finishImg = document.getElementById('finishImage');
+
+    // Background
+    document.body.className = st.background || 'bg-dark-gradient';
+    if (st.background === 'bg-custom') {
+      document.body.style.setProperty('--custom-bg1', st.customBgColor1);
+      document.body.style.setProperty('--custom-bg2', st.customBgColor2);
+    }
+
+    // Overlay image
+    const oi = document.getElementById('overlayImage');
+    if (st.overlayImage) {
+      oi.src = st.overlayImage;
+      oi.style.width = (st.overlaySize || 150) + 'px';
+      oi.className = 'overlay-image active pos-' + (st.overlayPosition || 'top-right');
+    } else {
+      oi.className = 'overlay-image';
+    }
+
+    // Timer finished
+    if (st.timerFinished) {
+      finish.classList.add('active');
+      finishMsg.textContent = st.finishMessage || '⏰ CZAS MINĄŁ!';
+      if (st.finishImage) {
+        finishImg.src = st.finishImage;
+        finishImg.classList.add('active');
+      } else {
+        finishImg.classList.remove('active');
+      }
+      if (!finishPlayed && st.soundEnabled && st.finishSound) {
+        playFinishSound();
+        finishPlayed = true;
+      }
+      return;
+    } else {
+      finish.classList.remove('active');
+    }
+
+    if (!st.timerRunning) {
+      display.style.color = st.timerColor || '#00ff88';
+      display.className = 'timer-display';
+      warning.style.display = 'none';
+      if (!st.timerEndTime) {
+        display.textContent = '00:00:00';
+        bar.style.width = '100%';
+        bar.style.backgroundColor = st.timerColor || '#00ff88';
+      }
+      finishPlayed = false;
+      warningPlayed = false;
+      dangerPlayed = false;
+      return;
+    }
+
+    let remaining;
+    if (st.timerPaused) {
+      remaining = st.timerPausedRemaining;
+    } else {
+      remaining = new Date(st.timerEndTime) - Date.now();
+    }
+
+    if (remaining <= 0) {
+      remaining = 0;
+      display.textContent = '00:00:00';
+      bar.style.width = '0%';
+      socket.emit('timer-finished');
+      return;
+    }
+
+    const totalSec = remaining / 1000;
+    const progress = st.timerDuration > 0 ? (remaining / st.timerDuration * 100) : 100;
+
+    // Color based on time remaining
+    let color = st.timerColor || '#00ff88';
+    if (totalSec <= (st.dangerThreshold || 60)) {
+      color = st.timerDangerColor || '#ff0040';
+      display.className = 'timer-display danger-flash';
+      warning.style.display = 'block';
+      warning.textContent = '🚨 OSTATNIE SEKUNDY! 🚨';
+      warning.style.color = color;
+      warning.style.borderColor = color;
+      warning.style.background = 'rgba(255,0,0,0.15)';
+      if (!dangerPlayed && st.soundEnabled && st.warningSound) {
+        playWarningSound();
+        dangerPlayed = true;
+      }
+      // Tick sound in last 10 seconds
+      if (totalSec <= 10 && st.soundEnabled && st.tickSound) {
+        playTickSound();
+      }
+    } else if (totalSec <= (st.warningThreshold || 300)) {
+      color = st.timerWarningColor || '#ff6b35';
+      display.className = 'timer-display warning-pulse';
+      warning.style.display = 'block';
+      warning.textContent = '⚠ CZAS SIĘ KOŃCZY ⚠';
+      warning.style.color = color;
+      warning.style.borderColor = color;
+      warning.style.background = 'rgba(255,107,53,0.1)';
+      if (!warningPlayed && st.soundEnabled && st.warningSound) {
+        playWarningSound();
+        warningPlayed = true;
+      }
+    } else {
+      display.className = 'timer-display';
+      warning.style.display = 'none';
+    }
+
+    display.style.color = color;
+    display.textContent = formatTime(remaining);
+    bar.style.width = progress + '%';
+    bar.style.backgroundColor = color;
+
+    if (st.timerPaused) {
+      document.getElementById('timerLabel').textContent = '⏸ PAUZA';
+    } else {
+      document.getElementById('timerLabel').textContent = 'HACKATHON TIMER';
+    }
+  }
+
+  function updateAnnouncement() {
+    const bar = document.getElementById('announcementBar');
+    const st = currentState;
+
+    if (st.announcement) {
+      bar.textContent = st.announcement.text;
+      bar.style.color = st.announcement.textColor || '#fff';
+      bar.style.backgroundColor = st.announcement.bgColor || 'rgba(0,0,0,0.85)';
+      bar.style.fontSize = (st.announcement.fontSize || 48) + 'px';
+      bar.className = 'announcement-bar active pos-' + (st.announcement.position || 'bottom');
+
+      if (announcementTimeout) clearTimeout(announcementTimeout);
+      if (st.announcement.duration > 0) {
+        announcementTimeout = setTimeout(() => {
+          bar.classList.remove('active');
+        }, st.announcement.duration * 1000);
+      }
+    } else {
+      bar.classList.remove('active');
+    }
+  }
+
+  let lastAnnouncementId = null;
+  socket.on('state-sync', (state) => {
+    currentState = state;
+    updateDisplay();
+
+    if (state.announcement && state.announcement.id !== lastAnnouncementId) {
+      lastAnnouncementId = state.announcement ? state.announcement.id : null;
+      updateAnnouncement();
+    } else if (!state.announcement) {
+      lastAnnouncementId = null;
+      updateAnnouncement();
+    }
+  });
+
+  // Update every 100ms for smooth countdown
+  setInterval(updateDisplay, 100);
+
+  // Init audio on first interaction
+  document.addEventListener('click', () => {
+    getAudioCtx();
+  }, { once: true });
+</script>
+</body>
+</html>
