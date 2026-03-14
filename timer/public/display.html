@@ -36,6 +36,7 @@
   .bg-aurora { background: linear-gradient(135deg, #001a0d 0%, #003322 25%, #001a33 50%, #0d0033 75%, #1a0033 100%); }
   .bg-galaxy { background: linear-gradient(135deg, #0a001a 0%, #1a0033 20%, #000d1a 40%, #001a33 60%, #0d001a 80%, #1a000d 100%); }
   .bg-custom { background: linear-gradient(135deg, var(--custom-bg1), var(--custom-bg2)); }
+  .bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
 
   /* === PARTICLES === */
   .particles {
@@ -763,8 +764,16 @@
   }
 
   function setAllLabels(text) {
+    const st = currentState;
+    const font = st.labelFont || 'Rajdhani';
+    const sizeScale = (st.labelSize || 100) / 100;
+    const transform = st.labelUppercase !== false ? 'uppercase' : 'none';
     ['timerLabel','ringLabel','classicLabel','minimalLabel','flipLabel'].forEach(id => {
-      document.getElementById(id).textContent = text;
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.style.fontFamily = `'${font}', sans-serif`;
+      el.style.transform = `scale(${sizeScale})`;
+      el.style.textTransform = transform;
     });
   }
 
@@ -812,6 +821,11 @@
     if (st.background === 'bg-custom') {
       document.body.style.setProperty('--custom-bg1', st.customBgColor1);
       document.body.style.setProperty('--custom-bg2', st.customBgColor2);
+      document.body.style.backgroundImage = '';
+    } else if (st.background === 'bg-image' && st.customBgImage) {
+      document.body.style.backgroundImage = `url(${st.customBgImage})`;
+    } else {
+      document.body.style.backgroundImage = '';
     }
 
     // Custom glow colors
@@ -819,6 +833,9 @@
       document.body.style.setProperty('--glow-color1', st.glowColor1 || '#00ff88');
       document.body.style.setProperty('--glow-color2', st.glowColor2 || '#0088ff');
     }
+
+    // Timer bar visibility
+    document.querySelector('.timer-bar-container').style.display = st.showTimerBar === false ? 'none' : 'block';
 
     // Timer display style
     switchTimerStyle(st.timerDisplayStyle || 'cyber');
@@ -878,7 +895,7 @@
         bar.style.width = '100%';
         bar.style.backgroundColor = defaultColor;
       }
-      setAllLabels(st.timerPaused ? '⏸ PAUZA' : (st.timerLabel || ''));
+      setAllLabels(st.timerPaused ? (st.pauseMessage || '⏸ PAUZA') : (st.timerLabel || ''));
       finishPlayed = false;
       warningPlayed = false;
       dangerPlayed = false;
@@ -917,7 +934,7 @@
       color = st.timerDangerColor || '#ff0040';
       display.className = 'timer-display danger-flash';
       warning.style.display = 'block';
-      warning.textContent = '🚨 OSTATNIE SEKUNDY! 🚨';
+      warning.textContent = st.dangerMessage || '🚨 OSTATNIE SEKUNDY! 🚨';
       warning.style.color = color;
       warning.style.borderColor = color;
       warning.style.background = 'rgba(255,0,0,0.15)';
@@ -932,7 +949,7 @@
       color = st.timerWarningColor || '#ff6b35';
       display.className = 'timer-display warning-pulse';
       warning.style.display = 'block';
-      warning.textContent = '⚠ CZAS SIĘ KOŃCZY ⚠';
+      warning.textContent = st.warningMessage || '⚠ CZAS SIĘ KOŃCZY ⚠';
       warning.style.color = color;
       warning.style.borderColor = color;
       warning.style.background = 'rgba(255,107,53,0.1)';
@@ -950,7 +967,7 @@
     bar.style.width = progressPct + '%';
     bar.style.backgroundColor = color;
 
-    setAllLabels(st.timerPaused ? '⏸ PAUZA' : (st.timerLabel || ''));
+    setAllLabels(st.timerPaused ? (st.pauseMessage || '⏸ PAUZA') : (st.timerLabel || ''));
   }
 
   function updateAnnouncement() {

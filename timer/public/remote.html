@@ -543,6 +543,35 @@
       <button class="btn btn-primary" onclick="setTimerLabel()" style="white-space:nowrap;">Ustaw</button>
     </div>
 
+    <label>Czcionka napisu</label>
+    <select id="labelFont" onchange="updateLabelStyle()" style="width:100%;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;">
+      <option value="Rajdhani">Rajdhani (domyślna)</option>
+      <option value="Orbitron">Orbitron (futurystyczna)</option>
+      <option value="JetBrains Mono">JetBrains Mono (monospace)</option>
+      <option value="Space Mono">Space Mono (retro)</option>
+      <option value="Arial">Arial (klasyczna)</option>
+      <option value="Georgia">Georgia (szeryfowa)</option>
+      <option value="Impact">Impact (mocna)</option>
+      <option value="Courier New">Courier New (maszyna)</option>
+    </select>
+
+    <label style="margin-top:10px;">Wielkość napisu: <span id="labelSizeVal">100</span>%</label>
+    <input type="range" id="labelSize" min="50" max="250" value="100" oninput="document.getElementById('labelSizeVal').textContent=this.value;updateLabelStyle()" style="width:100%;accent-color:var(--primary);">
+
+    <div style="margin-top:8px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="labelUppercase" checked onchange="updateLabelStyle()" style="accent-color:var(--primary);width:18px;height:18px;">
+        Wielkie litery (UPPERCASE)
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="showTimerBar" checked onchange="toggleTimerBar()" style="accent-color:var(--primary);width:18px;height:18px;">
+      Pokaż pasek postępu (na dole ekranu)
+    </label>
+
     <div class="divider"></div>
 
     <label>Styl wyświetlania timera</label>
@@ -585,6 +614,20 @@
     <label>Próg zagrożenia (sekundy)</label>
     <input type="number" id="dangerThreshold" value="60" min="0" onchange="updateTimerColors()">
     <div class="info-text">Ostatnie sekundy - miganie i alarm</div>
+
+    <div class="divider"></div>
+
+    <label>Komunikat ostrzeżenia</label>
+    <input type="text" id="warningMessage" value="⚠ CZAS SIĘ KOŃCZY ⚠" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <div class="info-text">Tekst wyświetlany gdy zbliża się koniec</div>
+
+    <label>Komunikat zagrożenia</label>
+    <input type="text" id="dangerMessage" value="🚨 OSTATNIE SEKUNDY! 🚨" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <div class="info-text">Tekst wyświetlany w ostatnich sekundach</div>
+
+    <label>Komunikat pauzy</label>
+    <input type="text" id="pauseMessage" value="⏸ PAUZA" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <div class="info-text">Tekst wyświetlany podczas pauzy</div>
 
     <div class="divider"></div>
 
@@ -679,6 +722,15 @@
       </div>
     </div>
     <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="setCustomBg()">Zastosuj własne tło</button>
+
+    <div class="divider"></div>
+    <label>Własne tło ze zdjęcia</label>
+    <input type="file" accept="image/*" id="bgImageInput" onchange="uploadBgImage(this)" style="display:none">
+    <button class="btn btn-accent btn-full" onclick="document.getElementById('bgImageInput').click()">📷 Wybierz zdjęcie</button>
+    <div id="bgImagePreview" style="display:none;margin-top:8px;text-align:center;">
+      <img id="bgImagePrev" style="max-width:100%;max-height:120px;border-radius:8px;border:2px solid var(--primary);">
+      <button class="btn btn-danger btn-full" style="margin-top:6px" onclick="removeBgImage()">Usuń zdjęcie tła</button>
+    </div>
   </div>
 </div>
 
@@ -783,6 +835,12 @@
       div.onclick = () => socket.emit('set-background', bg.id);
       grid.appendChild(div);
     });
+
+    // Show/hide bg image preview based on state
+    if (currentState.customBgImage && currentState.background === 'bg-image') {
+      document.getElementById('bgImagePrev').src = currentState.customBgImage;
+      document.getElementById('bgImagePreview').style.display = 'block';
+    }
   }
 
   // === TIMER ===
@@ -891,6 +949,18 @@
     if (e.key === 'Enter') setTimerLabel();
   });
 
+  function updateLabelStyle() {
+    socket.emit('set-label-style', {
+      font: document.getElementById('labelFont').value,
+      size: parseInt(document.getElementById('labelSize').value) || 100,
+      uppercase: document.getElementById('labelUppercase').checked,
+    });
+  }
+
+  function toggleTimerBar() {
+    socket.emit('set-timer-bar-visible', document.getElementById('showTimerBar').checked);
+  }
+
   function updateGlowColors() {
     socket.emit('set-timer-glow', {
       style: 'custom',
@@ -907,6 +977,9 @@
       dangerColor: document.getElementById('dangerColor').value,
       warningThreshold: parseInt(document.getElementById('warningThreshold').value) || 300,
       dangerThreshold: parseInt(document.getElementById('dangerThreshold').value) || 60,
+      warningMessage: document.getElementById('warningMessage').value,
+      dangerMessage: document.getElementById('dangerMessage').value,
+      pauseMessage: document.getElementById('pauseMessage').value,
     });
   }
 
@@ -974,6 +1047,41 @@
       color1: document.getElementById('customBg1').value,
       color2: document.getElementById('customBg2').value,
     });
+  }
+
+  function uploadBgImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize to max 1920px to keep payload reasonable
+        const maxW = 1920, maxH = 1080;
+        let w = img.width, h = img.height;
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        document.getElementById('bgImagePrev').src = dataUrl;
+        document.getElementById('bgImagePreview').style.display = 'block';
+        socket.emit('set-custom-bg-image', { image: dataUrl });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeBgImage() {
+    document.getElementById('bgImagePreview').style.display = 'none';
+    document.getElementById('bgImageInput').value = '';
+    socket.emit('set-custom-bg-image', { image: null });
+    socket.emit('set-background', 'bg-dark-gradient');
   }
 
   // === OVERLAY ===
@@ -1095,7 +1203,15 @@
     document.getElementById('warningThreshold').value = state.warningThreshold || 300;
     document.getElementById('dangerThreshold').value = state.dangerThreshold || 60;
     document.getElementById('finishMessage').value = state.finishMessage || '⏰ CZAS MINĄŁ!';
+    document.getElementById('warningMessage').value = state.warningMessage || '⚠ CZAS SIĘ KOŃCZY ⚠';
+    document.getElementById('dangerMessage').value = state.dangerMessage || '🚨 OSTATNIE SEKUNDY! 🚨';
+    document.getElementById('pauseMessage').value = state.pauseMessage || '⏸ PAUZA';
     document.getElementById('timerLabelInput').value = state.timerLabel || '';
+    document.getElementById('labelFont').value = state.labelFont || 'Rajdhani';
+    document.getElementById('labelSize').value = state.labelSize || 100;
+    document.getElementById('labelSizeVal').textContent = state.labelSize || 100;
+    document.getElementById('labelUppercase').checked = state.labelUppercase !== false;
+    document.getElementById('showTimerBar').checked = state.showTimerBar !== false;
     document.getElementById('glowColor1').value = state.glowColor1 || '#00ff88';
     document.getElementById('glowColor2').value = state.glowColor2 || '#0088ff';
     document.getElementById('soundEnabled').checked = state.soundEnabled !== false;

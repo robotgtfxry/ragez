@@ -594,6 +594,11 @@
                 <div class="theme-btn" data-theme="cherry" title="Wiśnia" onclick="setTheme('cherry')"></div>
                 <div class="theme-btn" data-theme="matrix" title="Matrix" onclick="setTheme('matrix')"></div>
             </div>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+              <input type="file" accept="image/*" id="bgImageInput" onchange="setBgImage(this)" style="display:none">
+              <button onclick="document.getElementById('bgImageInput').click()" style="flex:1;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);cursor:pointer;font-family:inherit;font-size:0.75rem;">📷 Własne zdjęcie</button>
+              <button id="removeBgImgBtn" onclick="removeBgImage()" style="display:none;padding:6px 10px;border-radius:8px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-family:inherit;font-size:0.75rem;">✕</button>
+            </div>
         </div>
     </div>
 
@@ -650,13 +655,66 @@
         // ===== THEMES =====
         function setTheme(name) {
             document.body.className = 'theme-' + name;
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundPosition = '';
             document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === name));
+            document.getElementById('removeBgImgBtn').style.display = 'none';
             localStorage.setItem('timer-theme', name);
+            localStorage.removeItem('timer-bg-image');
         }
 
-        // restore saved theme
+        function setBgImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxW = 1920, maxH = 1080;
+                    let w = img.width, h = img.height;
+                    if (w > maxW || h > maxH) {
+                        const ratio = Math.min(maxW / w, maxH / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    document.body.style.backgroundImage = `url(${dataUrl})`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                    document.getElementById('removeBgImgBtn').style.display = 'block';
+                    localStorage.setItem('timer-bg-image', dataUrl);
+                    localStorage.removeItem('timer-theme');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeBgImage() {
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundPosition = '';
+            document.getElementById('bgImageInput').value = '';
+            document.getElementById('removeBgImgBtn').style.display = 'none';
+            localStorage.removeItem('timer-bg-image');
+            setTheme('cosmic');
+        }
+
+        // restore saved theme or bg image
+        const savedBgImage = localStorage.getItem('timer-bg-image');
         const saved = localStorage.getItem('timer-theme');
-        if (saved) setTheme(saved);
+        if (savedBgImage) {
+            document.body.style.backgroundImage = `url(${savedBgImage})`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('removeBgImgBtn').style.display = 'block';
+        } else if (saved) setTheme(saved);
 
         // ===== MODES =====
         function switchMode(mode) {

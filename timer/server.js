@@ -48,6 +48,7 @@ let state = {
   background: 'bg-dark-gradient',
   customBgColor1: '#0a0a2e',
   customBgColor2: '#1a1a4e',
+  customBgImage: null,        // base64 image for background
 
   // Timer style
   timerColor: '#00ff88',
@@ -55,6 +56,9 @@ let state = {
   timerDangerColor: '#ff0040',
   warningThreshold: 300,    // seconds - when to show warning (5 min)
   dangerThreshold: 60,      // seconds - when to show danger (1 min)
+  warningMessage: '⚠ CZAS SIĘ KOŃCZY ⚠',
+  dangerMessage: '🚨 OSTATNIE SEKUNDY! 🚨',
+  pauseMessage: '⏸ PAUZA',
 
   // Announcements
   announcement: null,       // { text, textColor, bgColor, duration, fontSize }
@@ -74,6 +78,12 @@ let state = {
 
   // Timer label (shown under timer, empty = hidden)
   timerLabel: '',
+  labelFont: 'Rajdhani',       // font family for label
+  labelSize: 100,              // label size in % (100 = default)
+  labelUppercase: true,        // uppercase transform
+
+  // Timer bar
+  showTimerBar: true,          // show/hide bottom progress bar
 
   // Sounds
   soundEnabled: true,
@@ -204,12 +214,23 @@ io.on('connection', (socket) => {
     io.emit('state-sync', state);
   });
 
+  socket.on('set-custom-bg-image', (data) => {
+    state.customBgImage = data.image; // base64 or null
+    if (data.image) {
+      state.background = 'bg-image';
+    }
+    io.emit('state-sync', state);
+  });
+
   socket.on('set-timer-colors', (data) => {
     if (data.timerColor) state.timerColor = data.timerColor;
     if (data.warningColor) state.timerWarningColor = data.warningColor;
     if (data.dangerColor) state.timerDangerColor = data.dangerColor;
     if (data.warningThreshold !== undefined) state.warningThreshold = data.warningThreshold;
     if (data.dangerThreshold !== undefined) state.dangerThreshold = data.dangerThreshold;
+    if (data.warningMessage !== undefined) state.warningMessage = data.warningMessage;
+    if (data.dangerMessage !== undefined) state.dangerMessage = data.dangerMessage;
+    if (data.pauseMessage !== undefined) state.pauseMessage = data.pauseMessage;
     io.emit('state-sync', state);
   });
 
@@ -234,6 +255,18 @@ io.on('connection', (socket) => {
   // Timer label
   socket.on('set-timer-label', (label) => {
     state.timerLabel = label || '';
+    io.emit('state-sync', state);
+  });
+
+  socket.on('set-label-style', (data) => {
+    if (data.font !== undefined) state.labelFont = data.font;
+    if (data.size !== undefined) state.labelSize = data.size;
+    if (data.uppercase !== undefined) state.labelUppercase = data.uppercase;
+    io.emit('state-sync', state);
+  });
+
+  socket.on('set-timer-bar-visible', (visible) => {
+    state.showTimerBar = visible;
     io.emit('state-sync', state);
   });
 
