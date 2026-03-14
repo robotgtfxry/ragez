@@ -1,0 +1,13 @@
+{
+  "name": "hackathon-timer",
+  "version": "1.0.0",
+  "description": "Hackathon timer with remote control via phone",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "socket.io": "^4.7.5"
+  }
+}

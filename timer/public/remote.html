@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Timer - Pilot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            background: #0e0e14;
+            color: #fff;
+            padding: 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* header */
+        .header {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .conn-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.4);
+            margin-top: 0.3rem;
+        }
+
+        .conn-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            transition: background 0.3s;
+        }
+        .conn-dot.ok { background: #34d399; }
+
+        /* sections */
+        .section {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .section-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 0.8rem;
+        }
+
+        /* preview mini timer */
+        .preview {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .preview-time.urgent { -webkit-text-fill-color: #ef4444; }
+        .preview-time.warning { -webkit-text-fill-color: #f59e0b; }
+        .preview-time.finished { -webkit-text-fill-color: #34d399; }
+
+        .preview-status {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.35);
+            margin-top: 0.3rem;
+            letter-spacing: 0.1em;
+        }
+
+        .preview-event {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 0.3rem;
+            letter-spacing: 0.1em;
+        }
+
+        /* progress bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            margin-top: 0.8rem;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* mode tabs */
+        .mode-tabs {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 0.6rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.5);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .mode-tab.active {
+            background: rgba(167,139,250,0.15);
+            border-color: rgba(167,139,250,0.4);
+            color: #a78bfa;
+        }
+
+        /* input rows */
+        .input-row {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0.6rem;
+        }
+
+        .input-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .input-col label {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .input-col input[type="number"],
+        .input-col input[type="text"] {
+            width: 70px;
+            padding: 0.5rem;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            text-align: center;
+            outline: none;
+        }
+
+        .input-col input:focus { border-color: #a78bfa; }
+
+        .input-event {
+            width: 100% !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 0.9rem !important;
+        }
+
+        .setup-panel { display: none; }
+        .setup-panel.active { display: block; }
+
+        /* preset buttons */
+        .presets {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+
+        .preset-btn {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.5);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:active { background: rgba(167,139,250,0.2); border-color: #a78bfa; }
+
+        /* main controls */
+        .main-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+
+        .ctrl-btn {
+            padding: 1rem;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ctrl-btn:active { transform: scale(0.96); }
+
+        .btn-start {
+            background: linear-gradient(135deg, #a78bfa, #6366f1);
+            color: #fff;
+            grid-column: 1 / -1;
+            font-size: 1.1rem;
+            padding: 1.2rem;
+        }
+
+        .btn-pause {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: #fff;
+            grid-column: 1 / -1;
+            font-size: 1.1rem;
+            padding: 1.2rem;
+        }
+
+        .btn-reset {
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            grid-column: 1 / -1;
+        }
+
+        /* time adjust buttons */
+        .adjust-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .adjust-btn {
+            padding: 0.7rem 0.3rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.6);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .adjust-btn:active { background: rgba(167,139,250,0.2); }
+        .adjust-btn.add { color: #34d399; border-color: rgba(52,211,153,0.15); }
+        .adjust-btn.sub { color: #ef4444; border-color: rgba(239,68,68,0.15); }
+
+        /* theme grid */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+
+        .theme-btn {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .theme-btn.active { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .theme-btn:active { transform: scale(0.9); }
+
+        .theme-btn[data-theme="cosmic"]   { background: linear-gradient(135deg, #302b63, #24243e); }
+        .theme-btn[data-theme="sunset"]   { background: linear-gradient(135deg, #6b2fa0, #ff6a00); }
+        .theme-btn[data-theme="ocean"]    { background: linear-gradient(135deg, #003566, #0db39e); }
+        .theme-btn[data-theme="forest"]   { background: linear-gradient(135deg, #1b4332, #40916c); }
+        .theme-btn[data-theme="fire"]     { background: linear-gradient(135deg, #b91c1c, #f59e0b); }
+        .theme-btn[data-theme="neon"]     { background: linear-gradient(135deg, #0a0a0a, #00ff88); }
+        .theme-btn[data-theme="arctic"]   { background: linear-gradient(135deg, #1e3a5f, #a0d2db); }
+        .theme-btn[data-theme="midnight"] { background: linear-gradient(135deg, #090979, #00d4ff); }
+        .theme-btn[data-theme="cherry"]   { background: linear-gradient(135deg, #4a0028, #c2185b); }
+        .theme-btn[data-theme="matrix"]   { background: linear-gradient(135deg, #001a00, #00ff41); }
+
+        .theme-name {
+            font-size: 0.5rem;
+            text-align: center;
+            color: rgba(255,255,255,0.3);
+            margin-top: 0.2rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* hide/show based on state */
+        .when-stopped { display: block; }
+        .when-running { display: none; }
+        .running .when-stopped { display: none; }
+        .running .when-running { display: block; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Pilot Timera</h1>
+        <div class="conn-status">
+            <div class="conn-dot" id="connDot"></div>
+            <span id="connText">Łączenie...</span>
+        </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="section">
+        <div class="section-title">Podgląd projektora</div>
+        <div class="preview">
+            <div class="preview-event" id="previewEvent"></div>
+            <div class="preview-time" id="previewTime">00:00:00</div>
+            <div class="preview-status" id="previewStatus">Zatrzymany</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="section">
+        <div class="section-title">Sterowanie</div>
+        <div class="main-controls" id="mainControls">
+            <button class="ctrl-btn btn-start" id="btnStart" onclick="send('cmd:start')">Start</button>
+            <button class="ctrl-btn btn-pause hidden" id="btnPause" onclick="send('cmd:pause')">Pauza</button>
+            <button class="ctrl-btn btn-reset" onclick="send('cmd:reset')">Reset</button>
+        </div>
+
+        <!-- time adjustments (visible when running/paused) -->
+        <div class="adjust-controls hidden" id="adjustControls">
+            <button class="adjust-btn sub" onclick="send('cmd:addTime', -60)">-1 min</button>
+            <button class="adjust-btn sub" onclick="send('cmd:addTime', -300)">-5 min</button>
+            <button class="adjust-btn add" onclick="send('cmd:addTime', 300)">+5 min</button>
+            <button class="adjust-btn add" onclick="send('cmd:addTime', 60)">+1 min</button>
+        </div>
+    </div>
+
+    <!-- SETUP -->
+    <div class="section" id="setupSection">
+        <div class="section-title">Ustawienia</div>
+
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="countdown" onclick="setMode('countdown')">Odliczanie</button>
+            <button class="mode-tab" data-mode="target" onclick="setMode('target')">Do godziny</button>
+        </div>
+
+        <!-- countdown inputs -->
+        <div class="setup-panel active" id="panelCountdown">
+            <div class="input-row">
+                <div class="input-col">
+                    <input type="number" id="cH" min="0" max="99" value="0" onchange="sendCountdown()">
+                    <label>Godz.</label>
+                </div>
+                <div class="input-col">
+                    <input type="number" id="cM" min="0" max="59" value="5" onchange="sendCountdown()">
+                    <label>Min.</label>
+                </div>
+                <div class="input-col">
+                    <input type="number" id="cS" min="0" max="59" value="0" onchange="sendCountdown()">
+                    <label>Sek.</label>
+                </div>
+            </div>
+            <div class="presets">
+                <button class="preset-btn" onclick="setCountdownPreset(0,5,0)">5 min</button>
+                <button class="preset-btn" onclick="setCountdownPreset(0,10,0)">10 min</button>
+                <button class="preset-btn" onclick="setCountdownPreset(0,15,0)">15 min</button>
+                <button class="preset-btn" onclick="setCountdownPreset(0,30,0)">30 min</button>
+                <button class="preset-btn" onclick="setCountdownPreset(1,0,0)">1 godz</button>
+                <button class="preset-btn" onclick="setCountdownPreset(2,0,0)">2 godz</button>
+                <button class="preset-btn" onclick="setCountdownPreset(4,0,0)">4 godz</button>
+                <button class="preset-btn" onclick="setCountdownPreset(8,0,0)">8 godz</button>
+            </div>
+        </div>
+
+        <!-- target time inputs -->
+        <div class="setup-panel" id="panelTarget">
+            <div class="input-row">
+                <div class="input-col">
+                    <input type="number" id="tH" min="0" max="23" value="17" onchange="sendTarget()">
+                    <label>Godz.</label>
+                </div>
+                <div class="input-col">
+                    <input type="number" id="tM" min="0" max="59" value="0" onchange="sendTarget()">
+                    <label>Min.</label>
+                </div>
+            </div>
+            <div class="presets">
+                <button class="preset-btn" onclick="setTargetPreset(12,0)">12:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(14,0)">14:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(15,0)">15:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(16,0)">16:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(17,0)">17:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(18,0)">18:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(20,0)">20:00</button>
+                <button class="preset-btn" onclick="setTargetPreset(22,0)">22:00</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EVENT NAME -->
+    <div class="section" id="eventSection">
+        <div class="section-title">Nazwa wydarzenia</div>
+        <div class="input-row">
+            <div class="input-col" style="width:100%">
+                <input type="text" id="eventInput" class="input-event"
+                    placeholder="np. HackKrakow 2026"
+                    oninput="send('cmd:setEvent', this.value)">
+            </div>
+        </div>
+    </div>
+
+    <!-- THEMES -->
+    <div class="section">
+        <div class="section-title">Motyw tła</div>
+        <div class="theme-grid">
+            <div>
+                <div class="theme-btn active" data-theme="cosmic" onclick="setTheme('cosmic')"></div>
+                <div class="theme-name">Kosmos</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="sunset" onclick="setTheme('sunset')"></div>
+                <div class="theme-name">Zachód</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="ocean" onclick="setTheme('ocean')"></div>
+                <div class="theme-name">Ocean</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="forest" onclick="setTheme('forest')"></div>
+                <div class="theme-name">Las</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="fire" onclick="setTheme('fire')"></div>
+                <div class="theme-name">Ogień</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="neon" onclick="setTheme('neon')"></div>
+                <div class="theme-name">Neon</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="arctic" onclick="setTheme('arctic')"></div>
+                <div class="theme-name">Arktyka</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="midnight" onclick="setTheme('midnight')"></div>
+                <div class="theme-name">Północ</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="cherry" onclick="setTheme('cherry')"></div>
+                <div class="theme-name">Wiśnia</div>
+            </div>
+            <div>
+                <div class="theme-btn" data-theme="matrix" onclick="setTheme('matrix')"></div>
+                <div class="theme-name">Matrix</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="height: 2rem"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({ query: { role: 'remote' } });
+
+        const previewTime = document.getElementById('previewTime');
+        const previewStatus = document.getElementById('previewStatus');
+        const previewEvent = document.getElementById('previewEvent');
+        const progressBar = document.getElementById('progressBar');
+        const btnStart = document.getElementById('btnStart');
+        const btnPause = document.getElementById('btnPause');
+        const adjustControls = document.getElementById('adjustControls');
+        const setupSection = document.getElementById('setupSection');
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+        function send(cmd, data) { socket.emit(cmd, data); }
+
+        // ===== SYNC STATE =====
+        socket.on('state', (state) => {
+            const sec = Math.max(0, state.remainingSeconds);
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            const s = sec % 60;
+
+            previewTime.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+            previewTime.className = 'preview-time';
+            if (state.status === 'finished') previewTime.classList.add('finished');
+            else if (state.status === 'running' && sec <= 60) previewTime.classList.add('urgent');
+            else if (state.status === 'running' && sec <= 300) previewTime.classList.add('warning');
+
+            // progress bar
+            const pct = state.totalSeconds > 0 ? ((state.totalSeconds - sec) / state.totalSeconds * 100) : 0;
+            progressBar.style.width = pct + '%';
+
+            // event name
+            previewEvent.textContent = state.eventName || '';
+            document.getElementById('eventInput').value = state.eventName || '';
+
+            // status text
+            const statusMap = {
+                stopped: 'Zatrzymany',
+                running: state.mode === 'target'
+                    ? `Do ${pad(state.targetInput.h)}:${pad(state.targetInput.m)}`
+                    : 'Odliczanie...',
+                paused: 'PAUZA',
+                finished: 'CZAS MINĄŁ!'
+            };
+            previewStatus.textContent = statusMap[state.status] || '';
+
+            // buttons
+            const isActive = state.status === 'running' || state.status === 'paused';
+            btnStart.classList.toggle('hidden', state.status === 'running');
+            btnPause.classList.toggle('hidden', state.status !== 'running');
+            btnStart.textContent = state.status === 'paused' ? 'Wznów' : 'Start';
+            adjustControls.classList.toggle('hidden', !isActive);
+
+            // hide setup when running
+            setupSection.style.display = isActive ? 'none' : 'block';
+
+            // sync mode tabs
+            document.querySelectorAll('.mode-tab').forEach(t =>
+                t.classList.toggle('active', t.dataset.mode === state.mode));
+            document.getElementById('panelCountdown').classList.toggle('active', state.mode === 'countdown');
+            document.getElementById('panelTarget').classList.toggle('active', state.mode === 'target');
+
+            // sync inputs (only when stopped, to avoid overwriting user typing)
+            if (state.status === 'stopped') {
+                document.getElementById('cH').value = state.countdownInput.h;
+                document.getElementById('cM').value = state.countdownInput.m;
+                document.getElementById('cS').value = state.countdownInput.s;
+                document.getElementById('tH').value = state.targetInput.h;
+                document.getElementById('tM').value = state.targetInput.m;
+            }
+
+            // sync theme
+            document.querySelectorAll('.theme-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.theme === state.theme));
+        });
+
+        // ===== CONNECTION =====
+        socket.on('connect', () => {
+            document.getElementById('connDot').classList.add('ok');
+            document.getElementById('connText').textContent = 'Połączono';
+        });
+        socket.on('disconnect', () => {
+            document.getElementById('connDot').classList.remove('ok');
+            document.getElementById('connText').textContent = 'Rozłączono...';
+        });
+
+        // ===== MODE =====
+        function setMode(mode) {
+            send('cmd:setMode', mode);
+        }
+
+        // ===== COUNTDOWN =====
+        function sendCountdown() {
+            send('cmd:setCountdown', {
+                h: parseInt(document.getElementById('cH').value) || 0,
+                m: parseInt(document.getElementById('cM').value) || 0,
+                s: parseInt(document.getElementById('cS').value) || 0,
+            });
+        }
+
+        function setCountdownPreset(h, m, s) {
+            document.getElementById('cH').value = h;
+            document.getElementById('cM').value = m;
+            document.getElementById('cS').value = s;
+            sendCountdown();
+        }
+
+        // ===== TARGET =====
+        function sendTarget() {
+            send('cmd:setTarget', {
+                h: parseInt(document.getElementById('tH').value) || 0,
+                m: parseInt(document.getElementById('tM').value) || 0,
+            });
+        }
+
+        function setTargetPreset(h, m) {
+            document.getElementById('tH').value = h;
+            document.getElementById('tM').value = m;
+            sendTarget();
+        }
+
+        // ===== THEME =====
+        function setTheme(name) {
+            send('cmd:setTheme', name);
+        }
+    </script>
+</body>
+</html>

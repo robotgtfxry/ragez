@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon Timer - Display</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            overflow: hidden;
+            transition: background 0.8s ease;
+            cursor: none;
+        }
+
+        /* ===== THEMES ===== */
+        body.theme-cosmic   { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
+        body.theme-sunset   { background: linear-gradient(135deg, #1a0a2e, #6b2fa0, #d63384, #ff6a00); }
+        body.theme-ocean    { background: linear-gradient(135deg, #001d3d, #003566, #006d77, #0db39e); }
+        body.theme-forest   { background: linear-gradient(135deg, #0b1a0f, #1b4332, #2d6a4f, #40916c); }
+        body.theme-fire     { background: linear-gradient(135deg, #1a0000, #5c0a0a, #b91c1c, #f59e0b); }
+        body.theme-neon     { background: linear-gradient(135deg, #0a0a0a, #1a002e, #0a0a2e, #0a0a0a); }
+        body.theme-arctic   { background: linear-gradient(135deg, #0c1445, #1e3a5f, #4a90d9, #a0d2db); }
+        body.theme-midnight { background: linear-gradient(135deg, #020024, #090979, #00d4ff); }
+        body.theme-cherry   { background: linear-gradient(135deg, #1a0011, #4a0028, #8b1a4a, #c2185b); }
+        body.theme-matrix   { background: linear-gradient(135deg, #000000, #001a00, #003300, #000000); }
+
+        body.theme-neon .time-card { border-color: rgba(0,255,136,0.3); box-shadow: 0 0 40px rgba(0,255,136,0.1); }
+        body.theme-neon .time-card .digits { -webkit-text-fill-color: #00ff88; text-shadow: 0 0 30px rgba(0,255,136,0.5); }
+        body.theme-matrix .time-card .digits { -webkit-text-fill-color: #00ff41; text-shadow: 0 0 30px rgba(0,255,65,0.5); }
+
+        /* particles */
+        .bg-particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+        .particle {
+            position: absolute; border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            animation: float linear infinite;
+        }
+        @keyframes float {
+            0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        .container {
+            position: relative; z-index: 1;
+            text-align: center; padding: 2rem;
+            width: 100%;
+        }
+
+        .event-name {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 0.5rem;
+            min-height: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-text {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 2rem;
+            letter-spacing: 0.15em;
+            min-height: 1.5rem;
+        }
+
+        /* progress ring */
+        .progress-container { display: flex; justify-content: center; margin-bottom: 2rem; }
+        .progress-ring { transform: rotate(-90deg); }
+        .progress-ring__bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+        .progress-ring__fill {
+            fill: none; stroke: url(#gradient); stroke-width: 8;
+            stroke-linecap: round; transition: stroke-dashoffset 0.5s ease;
+        }
+
+        /* timer */
+        .timer-display {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .time-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 24px;
+            padding: 1.5rem 2rem;
+            min-width: 150px;
+            transition: all 0.4s;
+        }
+
+        .time-card .digits {
+            font-size: 5.5rem;
+            font-weight: 700;
+            line-height: 1;
+            background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .time-card .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: rgba(255,255,255,0.3);
+            margin-top: 0.6rem;
+        }
+
+        .separator {
+            font-size: 5rem;
+            font-weight: 300;
+            color: rgba(255,255,255,0.2);
+            align-self: center;
+            padding-bottom: 1.5rem;
+        }
+
+        .separator.blinking { animation: blink 1s ease-in-out infinite; }
+        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+
+        .current-time {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.25);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.1em;
+        }
+
+        /* states */
+        .urgent .time-card { border-color: rgba(239,68,68,0.4); animation: urgent-pulse 0.8s ease-in-out infinite; }
+        .urgent .time-card .digits { -webkit-text-fill-color: #ef4444; text-shadow: 0 0 30px rgba(239,68,68,0.4); }
+        @keyframes urgent-pulse {
+            0%,100% { box-shadow: 0 0 20px rgba(239,68,68,0.1); }
+            50% { box-shadow: 0 0 60px rgba(239,68,68,0.35); }
+        }
+
+        .warning .time-card { border-color: rgba(245,158,11,0.3); }
+        .warning .time-card .digits { -webkit-text-fill-color: #f59e0b; text-shadow: 0 0 20px rgba(245,158,11,0.3); }
+
+        .finished .time-card { border-color: rgba(52,211,153,0.4); animation: finish-pulse 1.5s ease-in-out infinite; }
+        @keyframes finish-pulse {
+            0%,100% { box-shadow: 0 0 20px rgba(52,211,153,0.1); }
+            50% { box-shadow: 0 0 70px rgba(52,211,153,0.3); }
+        }
+
+        .finished-text {
+            display: none;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #34d399;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            animation: fadeIn 0.5s ease;
+        }
+        .show { display: block !important; }
+
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        /* connection indicator */
+        .conn-indicator {
+            position: fixed; top: 1rem; right: 1rem;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: #ef4444; transition: background 0.3s;
+            box-shadow: 0 0 10px rgba(239,68,68,0.5);
+        }
+        .conn-indicator.connected { background: #34d399; box-shadow: 0 0 10px rgba(52,211,153,0.5); }
+
+        /* waiting screen */
+        .waiting {
+            font-size: 1.2rem; color: rgba(255,255,255,0.3);
+            letter-spacing: 0.1em; margin-top: 2rem;
+        }
+        .waiting code {
+            background: rgba(255,255,255,0.08);
+            padding: 0.3rem 0.8rem; border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem; color: rgba(255,255,255,0.6);
+        }
+
+        @media (max-width: 800px) {
+            .time-card { min-width: 100px; padding: 1rem 1.2rem; }
+            .time-card .digits { font-size: 3.5rem; }
+            .separator { font-size: 3rem; }
+            .event-name { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body class="theme-cosmic">
+    <div class="conn-indicator" id="connDot"></div>
+    <div class="bg-particles" id="particles"></div>
+
+    <div class="container">
+        <div class="event-name" id="eventName"></div>
+        <h1>Hackathon Timer</h1>
+        <div class="status-text" id="statusText">Oczekiwanie na start...</div>
+
+        <div class="progress-container">
+            <svg class="progress-ring" width="200" height="200">
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#a78bfa"/>
+                        <stop offset="50%" stop-color="#60a5fa"/>
+                        <stop offset="100%" stop-color="#34d399"/>
+                    </linearGradient>
+                </defs>
+                <circle class="progress-ring__bg" cx="100" cy="100" r="90"/>
+                <circle class="progress-ring__fill" id="progressRing" cx="100" cy="100" r="90"
+                    stroke-dasharray="565.49" stroke-dashoffset="0"/>
+            </svg>
+        </div>
+
+        <div class="timer-display" id="timerDisplay">
+            <div class="time-block"><div class="time-card">
+                <div class="digits" id="hours">00</div>
+                <div class="label">Godziny</div>
+            </div></div>
+            <div class="separator blinking">:</div>
+            <div class="time-block"><div class="time-card">
+                <div class="digits" id="minutes">00</div>
+                <div class="label">Minuty</div>
+            </div></div>
+            <div class="separator blinking">:</div>
+            <div class="time-block"><div class="time-card">
+                <div class="digits" id="seconds">00</div>
+                <div class="label">Sekundy</div>
+            </div></div>
+        </div>
+
+        <div class="finished-text" id="finishedText">Czas minął!</div>
+
+        <div class="current-time" id="currentTime"></div>
+
+        <div class="waiting" id="waitingMsg">
+            Otwórz pilota na telefonie: <code id="remoteUrl"></code>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({ query: { role: 'display' } });
+        const circumference = 2 * Math.PI * 90;
+
+        const el = {
+            hours: document.getElementById('hours'),
+            minutes: document.getElementById('minutes'),
+            seconds: document.getElementById('seconds'),
+            ring: document.getElementById('progressRing'),
+            display: document.getElementById('timerDisplay'),
+            eventName: document.getElementById('eventName'),
+            statusText: document.getElementById('statusText'),
+            finText: document.getElementById('finishedText'),
+            connDot: document.getElementById('connDot'),
+            waitingMsg: document.getElementById('waitingMsg'),
+        };
+
+        // show remote URL
+        document.getElementById('remoteUrl').textContent =
+            location.origin + '/remote.html';
+
+        // particles
+        (function() {
+            const c = document.getElementById('particles');
+            for (let i = 0; i < 35; i++) {
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                const size = Math.random() * 6 + 2;
+                p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                c.appendChild(p);
+            }
+        })();
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        // clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('currentTime').textContent =
+                pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+        }, 1000);
+
+        // alarm
+        function playAlarm() {
+            try {
+                const ctx = new AudioContext();
+                [880,1108,880,1108,880,0,880,1108,880,1108,880].forEach((f,i) => {
+                    if (!f) return;
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.type = 'sine'; o.frequency.value = f;
+                    g.gain.setValueAtTime(0.3, ctx.currentTime + i*0.2);
+                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.2 + 0.18);
+                    o.connect(g); g.connect(ctx.destination);
+                    o.start(ctx.currentTime + i*0.2);
+                    o.stop(ctx.currentTime + i*0.2 + 0.2);
+                });
+            } catch(e) {}
+        }
+
+        let prevStatus = 'stopped';
+
+        socket.on('state', (state) => {
+            // theme
+            document.body.className = 'theme-' + state.theme;
+
+            // event name
+            el.eventName.textContent = state.eventName || '';
+
+            // digits
+            const sec = Math.max(0, state.remainingSeconds);
+            el.hours.textContent   = pad(Math.floor(sec / 3600));
+            el.minutes.textContent = pad(Math.floor((sec % 3600) / 60));
+            el.seconds.textContent = pad(sec % 60);
+
+            // ring
+            const progress = state.totalSeconds > 0 ? (state.totalSeconds - sec) / state.totalSeconds : 0;
+            el.ring.style.strokeDashoffset = circumference * (1 - progress);
+
+            // blink separators only when running
+            document.querySelectorAll('.separator').forEach(s => {
+                s.classList.toggle('blinking', state.status === 'running');
+            });
+
+            // urgency
+            el.display.classList.remove('urgent', 'warning', 'finished');
+            if (state.status === 'running') {
+                if (sec <= 60) el.display.classList.add('urgent');
+                else if (sec <= 300) el.display.classList.add('warning');
+            }
+
+            // finished
+            if (state.status === 'finished') {
+                el.display.classList.add('finished');
+                el.finText.classList.add('show');
+                el.statusText.textContent = 'Czas dobiegł końca!';
+                document.title = 'CZAS MINĄŁ!';
+                if (prevStatus !== 'finished') playAlarm();
+            } else {
+                el.finText.classList.remove('show');
+            }
+
+            // status text
+            if (state.status === 'running') {
+                if (state.mode === 'target') {
+                    el.statusText.textContent = `Odliczanie do ${pad(state.targetInput.h)}:${pad(state.targetInput.m)}`;
+                } else {
+                    el.statusText.textContent = 'Odliczanie w toku...';
+                }
+                document.title = `${pad(Math.floor(sec/3600))}:${pad(Math.floor((sec%3600)/60))}:${pad(sec%60)} - Timer`;
+            } else if (state.status === 'paused') {
+                el.statusText.textContent = 'PAUZA';
+            } else if (state.status === 'stopped') {
+                el.statusText.textContent = 'Oczekiwanie na start...';
+                document.title = 'Hackathon Timer';
+            }
+
+            // hide waiting message when running
+            el.waitingMsg.style.display = (state.status === 'stopped') ? 'block' : 'none';
+
+            prevStatus = state.status;
+        });
+
+        socket.on('connect', () => el.connDot.classList.add('connected'));
+        socket.on('disconnect', () => el.connDot.classList.remove('connected'));
+
+        // auto fullscreen on click
+        document.addEventListener('click', () => {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+        });
+    </script>
+</body>
+</html>
