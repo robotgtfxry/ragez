@@ -523,7 +523,7 @@
   <!-- CYBER style (default) -->
   <div class="style-cyber style-active" id="styleCyber">
     <div class="timer-display" id="timerDisplay">00:00:00</div>
-    <div class="timer-label" id="timerLabel">HACKATHON TIMER</div>
+    <div class="timer-label" id="timerLabel"></div>
   </div>
 
   <!-- RING style - circular countdown -->
@@ -544,7 +544,7 @@
       </svg>
       <div class="ring-inner">
         <div class="ring-time" id="ringTime">00:00:00</div>
-        <div class="ring-label" id="ringLabel">HACKATHON TIMER</div>
+        <div class="ring-label" id="ringLabel"></div>
       </div>
     </div>
   </div>
@@ -567,7 +567,7 @@
         <span class="classic-unit">SEKUND</span>
       </div>
     </div>
-    <div class="classic-label" id="classicLabel">HACKATHON TIMER</div>
+    <div class="classic-label" id="classicLabel"></div>
   </div>
 
   <!-- MINIMAL style - clean thin -->
@@ -576,7 +576,7 @@
     <div class="minimal-bar-container">
       <div class="minimal-bar" id="minimalBar"></div>
     </div>
-    <div class="minimal-label" id="minimalLabel">HACKATHON TIMER</div>
+    <div class="minimal-label" id="minimalLabel"></div>
   </div>
 
   <!-- FLIP style - retro flip clock -->
@@ -600,7 +600,7 @@
         <span class="flip-unit">SEK</span>
       </div>
     </div>
-    <div class="flip-label" id="flipLabel">HACKATHON TIMER</div>
+    <div class="flip-label" id="flipLabel"></div>
   </div>
 </div>
 
@@ -950,7 +950,7 @@
     bar.style.width = progressPct + '%';
     bar.style.backgroundColor = color;
 
-    setAllLabels(st.timerPaused ? '⏸ PAUZA' : 'HACKATHON TIMER');
+    setAllLabels(st.timerPaused ? '⏸ PAUZA' : (st.timerLabel || ''));
   }
 
   function updateAnnouncement() {
