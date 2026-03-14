@@ -387,6 +387,91 @@
     gap: 6px;
     margin-top: 8px;
   }
+
+  /* === DISPLAY STYLE PICKER === */
+  .display-style-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .ds-option {
+    border-radius: 10px;
+    cursor: pointer;
+    border: 2px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: rgba(0,0,0,0.4);
+    padding: 10px 4px 8px;
+    text-align: center;
+  }
+  .ds-option:hover { transform: scale(1.03); }
+  .ds-option.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 12px rgba(0,255,136,0.3);
+  }
+  .ds-option .ds-icon { font-size: 22px; margin-bottom: 4px; }
+  .ds-option .ds-name {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* === GLOW PICKER === */
+  .glow-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .glow-option {
+    aspect-ratio: 2/1;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 2px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  .glow-option:hover { transform: scale(1.03); }
+  .glow-option.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 12px rgba(0,255,136,0.3);
+  }
+  .glow-option .glow-preview {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 900;
+    color: #00ff88;
+  }
+  .glow-option .glow-name {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  /* Preview effects */
+  .glow-option[data-glow="none"] .glow-preview { text-shadow: none; }
+  .glow-option[data-glow="soft"] .glow-preview { text-shadow: 0 0 6px #00ff88, 0 0 12px rgba(255,255,255,0.1); }
+  .glow-option[data-glow="neon"] .glow-preview { text-shadow: 0 0 6px #00ff88, 0 0 15px #00ff88, 0 0 30px #00ff88; }
+  .glow-option[data-glow="pulse"] .glow-preview { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88; animation: glowPulsePreview 2s ease-in-out infinite; }
+  .glow-option[data-glow="fire"] .glow-preview { color: #ff6600; text-shadow: 0 0 6px #ff4400, 0 0 15px #ff6600, 0 0 30px #ff8800; }
+  .glow-option[data-glow="ice"] .glow-preview { color: #00ccff; text-shadow: 0 0 6px #00ccff, 0 0 15px #00aaff, 0 0 30px #0088ff; }
+  @keyframes glowPulsePreview {
+    0%, 100% { text-shadow: 0 0 4px #00ff88, 0 0 10px #00ff88; }
+    50% { text-shadow: 0 0 10px #00ff88, 0 0 25px #00ff88, 0 0 50px #00ff88; }
+  }
 </style>
 </head>
 <body>
@@ -482,6 +567,14 @@
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
+    <label>Styl wyświetlania timera</label>
+    <div class="display-style-grid" id="displayStyleGrid"></div>
+
+    <div class="divider"></div>
+
+    <label>Styl świecenia timera</label>
+    <div class="glow-grid" id="glowGrid"></div>
+
     <label>Kolor timera (normalny)</label>
     <input type="color" id="timerColor" value="#00ff88" onchange="updateTimerColors()">
 
@@ -725,6 +818,58 @@
   function stopTimer() { socket.emit('stop-timer'); }
   function addTime(sec) { socket.emit('add-time', sec); }
 
+  // === TIMER DISPLAY STYLES ===
+  const displayStyles = [
+    { id: 'cyber', name: 'Cyber', icon: '💠' },
+    { id: 'ring', name: 'Kołowy', icon: '⭕' },
+    { id: 'classic', name: 'Klasyk', icon: '🏛' },
+    { id: 'minimal', name: 'Minimal', icon: '━' },
+    { id: 'flip', name: 'Retro', icon: '🔢' },
+  ];
+
+  function renderDisplayStyleGrid() {
+    const grid = document.getElementById('displayStyleGrid');
+    grid.innerHTML = '';
+    displayStyles.forEach(ds => {
+      const div = document.createElement('div');
+      div.className = 'ds-option' + ((currentState.timerDisplayStyle || 'cyber') === ds.id ? ' active' : '');
+      div.innerHTML = `<span class="ds-icon">${ds.icon}</span><span class="ds-name">${ds.name}</span>`;
+      div.onclick = () => {
+        socket.emit('set-timer-display-style', ds.id);
+        document.querySelectorAll('.ds-option').forEach(el => el.classList.remove('active'));
+        div.classList.add('active');
+      };
+      grid.appendChild(div);
+    });
+  }
+
+  // === GLOW STYLES ===
+  const glowStyles = [
+    { id: 'none', name: 'Brak', preview: '12:34' },
+    { id: 'soft', name: 'Miękki', preview: '12:34' },
+    { id: 'neon', name: 'Neon', preview: '12:34' },
+    { id: 'pulse', name: 'Pulsujący', preview: '12:34' },
+    { id: 'fire', name: 'Ogień', preview: '12:34' },
+    { id: 'ice', name: 'Lód', preview: '12:34' },
+  ];
+
+  function renderGlowGrid() {
+    const grid = document.getElementById('glowGrid');
+    grid.innerHTML = '';
+    glowStyles.forEach(g => {
+      const div = document.createElement('div');
+      div.className = 'glow-option' + ((currentState.timerGlowStyle || 'neon') === g.id ? ' active' : '');
+      div.setAttribute('data-glow', g.id);
+      div.innerHTML = `<span class="glow-preview">${g.preview}</span><span class="glow-name">${g.name}</span>`;
+      div.onclick = () => {
+        socket.emit('set-timer-glow', g.id);
+        document.querySelectorAll('.glow-option').forEach(el => el.classList.remove('active'));
+        div.classList.add('active');
+      };
+      grid.appendChild(div);
+    });
+  }
+
   // === TIMER COLORS ===
   function updateTimerColors() {
     socket.emit('set-timer-colors', {
@@ -910,6 +1055,8 @@
   socket.on('state-sync', (state) => {
     currentState = state;
     renderBgGrid();
+    renderDisplayStyleGrid();
+    renderGlowGrid();
     updateRemoteTimer();
 
     // Sync form values
@@ -940,6 +1087,8 @@
 
   // Init
   renderBgGrid();
+  renderDisplayStyleGrid();
+  renderGlowGrid();
 </script>
 </body>
 </html>

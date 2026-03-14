@@ -65,12 +65,63 @@
     font-weight: 900;
     font-size: clamp(80px, 18vw, 280px);
     letter-spacing: 0.05em;
+    transition: color 0.5s ease, text-shadow 0.5s ease;
+    line-height: 1;
+  }
+
+  /* === GLOW STYLES === */
+  .glow-none .timer-display {
+    text-shadow: none;
+  }
+  .glow-soft .timer-display {
+    text-shadow:
+      0 0 10px currentColor,
+      0 0 20px rgba(255,255,255,0.1);
+  }
+  .glow-neon .timer-display {
+    text-shadow:
+      0 0 10px currentColor,
+      0 0 30px currentColor,
+      0 0 60px currentColor,
+      0 0 120px currentColor;
+  }
+  .glow-pulse .timer-display {
     text-shadow:
       0 0 20px currentColor,
       0 0 40px currentColor,
       0 0 80px currentColor;
-    transition: color 0.5s ease;
-    line-height: 1;
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% {
+      text-shadow:
+        0 0 10px currentColor,
+        0 0 20px currentColor,
+        0 0 40px currentColor;
+    }
+    50% {
+      text-shadow:
+        0 0 20px currentColor,
+        0 0 60px currentColor,
+        0 0 120px currentColor,
+        0 0 200px currentColor;
+    }
+  }
+  .glow-fire .timer-display {
+    text-shadow:
+      0 0 10px #ff4400,
+      0 0 30px #ff6600,
+      0 0 60px #ff8800,
+      0 0 100px #ffaa00,
+      0 2px 4px rgba(0,0,0,0.8);
+  }
+  .glow-ice .timer-display {
+    text-shadow:
+      0 0 10px #00ccff,
+      0 0 30px #00aaff,
+      0 0 60px #0088ff,
+      0 0 100px #4400ff,
+      0 2px 4px rgba(0,0,0,0.8);
   }
 
   .timer-label {
@@ -225,6 +276,235 @@
   .overlay-image.pos-bottom-right { bottom: 20px; right: 20px; }
   .overlay-image.pos-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
+  /* === TIMER STYLE SWITCHING === */
+  .style-cyber, .style-ring, .style-classic, .style-minimal, .style-flip {
+    display: none;
+  }
+  .style-active { display: block !important; }
+
+  /* === RING STYLE === */
+  .ring-wrapper {
+    position: relative;
+    width: clamp(280px, 50vw, 550px);
+    height: clamp(280px, 50vw, 550px);
+    margin: 0 auto;
+  }
+  .ring-svg {
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+  .ring-bg {
+    fill: none;
+    stroke: rgba(255,255,255,0.06);
+    stroke-width: 12;
+  }
+  .ring-progress {
+    fill: none;
+    stroke: url(#ringGrad);
+    stroke-width: 14;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+    filter: drop-shadow(0 0 12px rgba(0,255,136,0.5));
+  }
+  .ring-ticks line {
+    stroke: rgba(255,255,255,0.15);
+    stroke-width: 1;
+  }
+  .ring-ticks line.major {
+    stroke: rgba(255,255,255,0.35);
+    stroke-width: 2;
+  }
+  .ring-inner {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .ring-time {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(36px, 8vw, 80px);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    transition: color 0.5s;
+  }
+  .ring-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(12px, 2vw, 22px);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-top: 5px;
+  }
+
+  /* === CLASSIC STYLE === */
+  .classic-cards {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(12px, 3vw, 30px);
+  }
+  .classic-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: clamp(12px, 2vw, 24px);
+    padding: clamp(16px, 3vw, 40px) clamp(20px, 4vw, 50px);
+    text-align: center;
+    min-width: clamp(80px, 15vw, 180px);
+    transition: border-color 0.5s, box-shadow 0.5s;
+  }
+  .classic-digit {
+    display: block;
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(50px, 12vw, 140px);
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.5s;
+  }
+  .classic-unit {
+    display: block;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(10px, 1.5vw, 16px);
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.3);
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+  .classic-sep {
+    font-size: clamp(40px, 10vw, 120px);
+    font-weight: 300;
+    color: rgba(255,255,255,0.15);
+    padding-bottom: clamp(20px, 4vw, 50px);
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+  .classic-label {
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(14px, 2.5vw, 28px);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    opacity: 0.5;
+    margin-top: clamp(16px, 3vw, 30px);
+    text-transform: uppercase;
+  }
+
+  /* === MINIMAL STYLE === */
+  .style-minimal { width: 80vw; max-width: 900px; }
+  .minimal-time {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(60px, 15vw, 200px);
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.1em;
+    color: #fff;
+    transition: color 0.5s;
+  }
+  .minimal-bar-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    margin-top: clamp(10px, 2vw, 25px);
+    overflow: hidden;
+  }
+  .minimal-bar {
+    height: 100%;
+    width: 100%;
+    border-radius: 4px;
+    background: #00ff88;
+    transition: width 0.5s linear, background-color 0.5s;
+    box-shadow: 0 0 10px currentColor;
+  }
+  .minimal-label {
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(12px, 2vw, 22px);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    opacity: 0.4;
+    margin-top: clamp(8px, 1.5vw, 18px);
+    text-transform: uppercase;
+  }
+
+  /* === FLIP STYLE === */
+  .flip-cards {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(8px, 2vw, 20px);
+  }
+  .flip-group {
+    display: flex;
+    gap: clamp(3px, 0.5vw, 6px);
+    position: relative;
+  }
+  .flip-card {
+    background: linear-gradient(180deg, #2a2a3e 0%, #1a1a2e 49.9%, #151525 50.1%, #1a1a2e 100%);
+    border-radius: clamp(6px, 1vw, 14px);
+    padding: clamp(10px, 2vw, 25px) clamp(8px, 1.5vw, 20px);
+    min-width: clamp(40px, 8vw, 90px);
+    text-align: center;
+    box-shadow:
+      0 4px 15px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      inset 0 -1px 0 rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  .flip-card::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    height: 1px;
+    background: rgba(0,0,0,0.4);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .flip-digit {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(40px, 10vw, 110px);
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+  .flip-sep {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(30px, 8vw, 90px);
+    font-weight: 300;
+    color: rgba(255,255,255,0.2);
+    padding-bottom: clamp(15px, 3vw, 40px);
+    animation: blink 1s ease-in-out infinite;
+  }
+  .flip-unit {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(8px, 1.2vw, 14px);
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .flip-label {
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(14px, 2.5vw, 28px);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    opacity: 0.5;
+    margin-top: clamp(30px, 5vw, 50px);
+    text-transform: uppercase;
+  }
+
   /* === SCREEN FLASH FOR SOUNDS === */
   .screen-flash {
     position: fixed;
@@ -239,9 +519,89 @@
 
 <div class="particles" id="particles"></div>
 
-<div class="timer-container">
-  <div class="timer-display" id="timerDisplay">00:00:00</div>
-  <div class="timer-label" id="timerLabel">HACKATHON TIMER</div>
+<div class="timer-container" id="timerContainer">
+  <!-- CYBER style (default) -->
+  <div class="style-cyber style-active" id="styleCyber">
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="timer-label" id="timerLabel">HACKATHON TIMER</div>
+  </div>
+
+  <!-- RING style - circular countdown -->
+  <div class="style-ring" id="styleRing">
+    <div class="ring-wrapper">
+      <svg class="ring-svg" viewBox="0 0 400 400">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" id="ringGradStop1" stop-color="#00ff88"/>
+            <stop offset="100%" id="ringGradStop2" stop-color="#00cc66"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="200" cy="200" r="175" />
+        <circle class="ring-progress" id="ringProgress" cx="200" cy="200" r="175"
+          stroke-dasharray="1099.56" stroke-dashoffset="0" />
+        <!-- tick marks -->
+        <g class="ring-ticks" id="ringTicks"></g>
+      </svg>
+      <div class="ring-inner">
+        <div class="ring-time" id="ringTime">00:00:00</div>
+        <div class="ring-label" id="ringLabel">HACKATHON TIMER</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLASSIC style - elegant cards -->
+  <div class="style-classic" id="styleClassic">
+    <div class="classic-cards">
+      <div class="classic-card">
+        <span class="classic-digit" id="classicHours">00</span>
+        <span class="classic-unit">GODZIN</span>
+      </div>
+      <div class="classic-sep">:</div>
+      <div class="classic-card">
+        <span class="classic-digit" id="classicMinutes">00</span>
+        <span class="classic-unit">MINUT</span>
+      </div>
+      <div class="classic-sep">:</div>
+      <div class="classic-card">
+        <span class="classic-digit" id="classicSeconds">00</span>
+        <span class="classic-unit">SEKUND</span>
+      </div>
+    </div>
+    <div class="classic-label" id="classicLabel">HACKATHON TIMER</div>
+  </div>
+
+  <!-- MINIMAL style - clean thin -->
+  <div class="style-minimal" id="styleMinimal">
+    <div class="minimal-time" id="minimalTime">00:00:00</div>
+    <div class="minimal-bar-container">
+      <div class="minimal-bar" id="minimalBar"></div>
+    </div>
+    <div class="minimal-label" id="minimalLabel">HACKATHON TIMER</div>
+  </div>
+
+  <!-- FLIP style - retro flip clock -->
+  <div class="style-flip" id="styleFlip">
+    <div class="flip-cards">
+      <div class="flip-group">
+        <div class="flip-card"><span class="flip-digit" id="flipH1">0</span></div>
+        <div class="flip-card"><span class="flip-digit" id="flipH2">0</span></div>
+        <span class="flip-unit">GODZ</span>
+      </div>
+      <div class="flip-sep">:</div>
+      <div class="flip-group">
+        <div class="flip-card"><span class="flip-digit" id="flipM1">0</span></div>
+        <div class="flip-card"><span class="flip-digit" id="flipM2">0</span></div>
+        <span class="flip-unit">MIN</span>
+      </div>
+      <div class="flip-sep">:</div>
+      <div class="flip-group">
+        <div class="flip-card"><span class="flip-digit" id="flipS1">0</span></div>
+        <div class="flip-card"><span class="flip-digit" id="flipS2">0</span></div>
+        <span class="flip-unit">SEK</span>
+      </div>
+    </div>
+    <div class="flip-label" id="flipLabel">HACKATHON TIMER</div>
+  </div>
 </div>
 
 <div class="timer-bar-container">
@@ -322,6 +682,90 @@
   }
 
   // Create particles
+  // Generate ring tick marks
+  (function() {
+    const ticks = document.getElementById('ringTicks');
+    for (let i = 0; i < 60; i++) {
+      const angle = (i * 6) * Math.PI / 180;
+      const isMajor = i % 5 === 0;
+      const r1 = isMajor ? 155 : 160;
+      const r2 = 168;
+      const x1 = 200 + r1 * Math.cos(angle);
+      const y1 = 200 + r1 * Math.sin(angle);
+      const x2 = 200 + r2 * Math.cos(angle);
+      const y2 = 200 + r2 * Math.sin(angle);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      if (isMajor) line.classList.add('major');
+      ticks.appendChild(line);
+    }
+  })();
+
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 175; // ~1099.56
+
+  function switchTimerStyle(style) {
+    ['styleCyber','styleRing','styleClassic','styleMinimal','styleFlip'].forEach(id => {
+      document.getElementById(id).classList.remove('style-active');
+    });
+    const map = { cyber:'styleCyber', ring:'styleRing', classic:'styleClassic', minimal:'styleMinimal', flip:'styleFlip' };
+    const el = document.getElementById(map[style] || 'styleCyber');
+    if (el) el.classList.add('style-active');
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function updateAllTimerStyles(timeStr, h, m, s, progress, color) {
+    // Cyber
+    document.getElementById('timerDisplay').textContent = timeStr;
+    document.getElementById('timerDisplay').style.color = color;
+
+    // Ring
+    document.getElementById('ringTime').textContent = timeStr;
+    document.getElementById('ringTime').style.color = color;
+    const ringOffset = RING_CIRCUMFERENCE * (1 - progress);
+    document.getElementById('ringProgress').style.strokeDashoffset = ringOffset;
+    document.getElementById('ringGradStop1').setAttribute('stop-color', color);
+    document.getElementById('ringGradStop2').setAttribute('stop-color', color);
+    document.getElementById('ringProgress').style.filter = `drop-shadow(0 0 12px ${color})`;
+
+    // Classic
+    document.getElementById('classicHours').textContent = pad(h);
+    document.getElementById('classicMinutes').textContent = pad(m);
+    document.getElementById('classicSeconds').textContent = pad(s);
+    document.querySelectorAll('.classic-digit').forEach(el => {
+      el.style.background = `linear-gradient(180deg, ${color}, ${color}99)`;
+      el.style.webkitBackgroundClip = 'text';
+      el.style.webkitTextFillColor = 'transparent';
+    });
+    document.querySelectorAll('.classic-card').forEach(el => {
+      el.style.borderColor = color + '20';
+      el.style.boxShadow = `0 0 30px ${color}10`;
+    });
+
+    // Minimal
+    document.getElementById('minimalTime').textContent = timeStr;
+    document.getElementById('minimalTime').style.color = color;
+    document.getElementById('minimalBar').style.width = (progress * 100) + '%';
+    document.getElementById('minimalBar').style.backgroundColor = color;
+
+    // Flip
+    const hStr = pad(h), mStr = pad(m), sStr = pad(s);
+    document.getElementById('flipH1').textContent = hStr[0];
+    document.getElementById('flipH2').textContent = hStr[1];
+    document.getElementById('flipM1').textContent = mStr[0];
+    document.getElementById('flipM2').textContent = mStr[1];
+    document.getElementById('flipS1').textContent = sStr[0];
+    document.getElementById('flipS2').textContent = sStr[1];
+    document.querySelectorAll('.flip-digit').forEach(el => el.style.color = color);
+  }
+
+  function setAllLabels(text) {
+    ['timerLabel','ringLabel','classicLabel','minimalLabel','flipLabel'].forEach(id => {
+      document.getElementById(id).textContent = text;
+    });
+  }
+
   function createParticles() {
     const container = document.getElementById('particles');
     container.innerHTML = '';
@@ -360,12 +804,16 @@
     const finishMsg = document.getElementById('finishMessage');
     const finishImg = document.getElementById('finishImage');
 
-    // Background
-    document.body.className = st.background || 'bg-dark-gradient';
+    // Background + Glow
+    const glowClass = 'glow-' + (st.timerGlowStyle || 'neon');
+    document.body.className = (st.background || 'bg-dark-gradient') + ' ' + glowClass;
     if (st.background === 'bg-custom') {
       document.body.style.setProperty('--custom-bg1', st.customBgColor1);
       document.body.style.setProperty('--custom-bg2', st.customBgColor2);
     }
+
+    // Timer display style
+    switchTimerStyle(st.timerDisplayStyle || 'cyber');
 
     // Overlay image
     const oi = document.getElementById('overlayImage');
@@ -397,14 +845,15 @@
     }
 
     if (!st.timerRunning) {
-      display.style.color = st.timerColor || '#00ff88';
+      const defaultColor = st.timerColor || '#00ff88';
       display.className = 'timer-display';
       warning.style.display = 'none';
       if (!st.timerEndTime) {
-        display.textContent = '00:00:00';
+        updateAllTimerStyles('00:00:00', 0, 0, 0, 1, defaultColor);
         bar.style.width = '100%';
-        bar.style.backgroundColor = st.timerColor || '#00ff88';
+        bar.style.backgroundColor = defaultColor;
       }
+      setAllLabels(st.timerPaused ? '⏸ PAUZA' : 'HACKATHON TIMER');
       finishPlayed = false;
       warningPlayed = false;
       dangerPlayed = false;
@@ -420,14 +869,22 @@
 
     if (remaining <= 0) {
       remaining = 0;
-      display.textContent = '00:00:00';
+      updateAllTimerStyles('00:00:00', 0, 0, 0, 0, st.timerDangerColor || '#ff0040');
       bar.style.width = '0%';
       socket.emit('timer-finished');
       return;
     }
 
     const totalSec = remaining / 1000;
-    const progress = st.timerDuration > 0 ? (remaining / st.timerDuration * 100) : 100;
+    const progressRatio = st.timerDuration > 0 ? (remaining / st.timerDuration) : 1;
+    const progressPct = progressRatio * 100;
+
+    // Parsed time
+    const ceilSec = Math.ceil(totalSec);
+    const h = Math.floor(ceilSec / 3600);
+    const m = Math.floor((ceilSec % 3600) / 60);
+    const s = ceilSec % 60;
+    const timeStr = formatTime(remaining);
 
     // Color based on time remaining
     let color = st.timerColor || '#00ff88';
@@ -443,7 +900,6 @@
         playWarningSound();
         dangerPlayed = true;
       }
-      // Tick sound in last 10 seconds
       if (totalSec <= 10 && st.soundEnabled && st.tickSound) {
         playTickSound();
       }
@@ -464,16 +920,12 @@
       warning.style.display = 'none';
     }
 
-    display.style.color = color;
-    display.textContent = formatTime(remaining);
-    bar.style.width = progress + '%';
+    // Update ALL timer styles
+    updateAllTimerStyles(timeStr, h, m, s, progressRatio, color);
+    bar.style.width = progressPct + '%';
     bar.style.backgroundColor = color;
 
-    if (st.timerPaused) {
-      document.getElementById('timerLabel').textContent = '⏸ PAUZA';
-    } else {
-      document.getElementById('timerLabel').textContent = 'HACKATHON TIMER';
-    }
+    setAllLabels(st.timerPaused ? '⏸ PAUZA' : 'HACKATHON TIMER');
   }
 
   function updateAnnouncement() {

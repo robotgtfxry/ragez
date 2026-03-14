@@ -42,6 +42,12 @@ let state = {
   finishImage: null,        // base64 image
   timerFinished: false,
 
+  // Timer glow style: 'none', 'soft', 'neon', 'pulse', 'fire', 'ice'
+  timerGlowStyle: 'neon',
+
+  // Timer display style: 'cyber', 'ring', 'classic', 'minimal', 'flip'
+  timerDisplayStyle: 'cyber',
+
   // Sounds
   soundEnabled: true,
   warningSound: true,
@@ -172,6 +178,18 @@ io.on('connection', (socket) => {
     if (data.dangerColor) state.timerDangerColor = data.dangerColor;
     if (data.warningThreshold !== undefined) state.warningThreshold = data.warningThreshold;
     if (data.dangerThreshold !== undefined) state.dangerThreshold = data.dangerThreshold;
+    io.emit('state-sync', state);
+  });
+
+  // Timer glow style
+  socket.on('set-timer-glow', (style) => {
+    state.timerGlowStyle = style;
+    io.emit('state-sync', state);
+  });
+
+  // Timer display style
+  socket.on('set-timer-display-style', (style) => {
+    state.timerDisplayStyle = style;
     io.emit('state-sync', state);
   });
 
