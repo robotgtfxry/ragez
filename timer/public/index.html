@@ -183,24 +183,71 @@
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
         /* connection indicator */
-        .conn-indicator {
+        .top-bar {
             position: fixed; top: 1rem; right: 1rem;
+            display: flex; align-items: center; gap: 0.8rem;
+            z-index: 10;
+        }
+
+        .conn-indicator {
             width: 12px; height: 12px; border-radius: 50%;
             background: #ef4444; transition: background 0.3s;
             box-shadow: 0 0 10px rgba(239,68,68,0.5);
         }
         .conn-indicator.connected { background: #34d399; box-shadow: 0 0 10px rgba(52,211,153,0.5); }
 
-        /* waiting screen */
-        .waiting {
-            font-size: 1.2rem; color: rgba(255,255,255,0.3);
-            letter-spacing: 0.1em; margin-top: 2rem;
-        }
-        .waiting code {
-            background: rgba(255,255,255,0.08);
-            padding: 0.3rem 0.8rem; border-radius: 8px;
+        .client-count {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.3);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem; color: rgba(255,255,255,0.6);
+        }
+
+        /* QR + waiting */
+        .waiting-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .qr-box {
+            background: #fff;
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 0 30px rgba(255,255,255,0.1);
+        }
+
+        .qr-box canvas { display: block; }
+
+        .waiting-info {
+            text-align: left;
+        }
+
+        .waiting-info .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 0.3rem;
+        }
+
+        .waiting-info .url {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.7);
+            background: rgba(255,255,255,0.06);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 0.8rem;
+            word-break: break-all;
+        }
+
+        .waiting-info .hint {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.25);
         }
 
         @media (max-width: 800px) {
@@ -212,7 +259,11 @@
     </style>
 </head>
 <body class="theme-cosmic">
-    <div class="conn-indicator" id="connDot"></div>
+    <div class="top-bar">
+        <span class="client-count" id="clientCount"></span>
+        <div class="conn-indicator" id="connDot"></div>
+    </div>
+
     <div class="bg-particles" id="particles"></div>
 
     <div class="container">
@@ -256,144 +307,584 @@
 
         <div class="current-time" id="currentTime"></div>
 
-        <div class="waiting" id="waitingMsg">
-            Otwórz pilota na telefonie: <code id="remoteUrl"></code>
+        <div class="waiting-panel" id="waitingPanel">
+            <div class="qr-box">
+                <canvas id="qrCanvas"></canvas>
+            </div>
+            <div class="waiting-info">
+                <div class="label">Pilot zdalny</div>
+                <div class="url" id="remoteUrl"></div>
+                <div class="hint">Zeskanuj QR lub wpisz adres w przeglądarkę na telefonie</div>
+            </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({ query: { role: 'display' } });
-        const circumference = 2 * Math.PI * 90;
-
-        const el = {
-            hours: document.getElementById('hours'),
-            minutes: document.getElementById('minutes'),
-            seconds: document.getElementById('seconds'),
-            ring: document.getElementById('progressRing'),
-            display: document.getElementById('timerDisplay'),
-            eventName: document.getElementById('eventName'),
-            statusText: document.getElementById('statusText'),
-            finText: document.getElementById('finishedText'),
-            connDot: document.getElementById('connDot'),
-            waitingMsg: document.getElementById('waitingMsg'),
-        };
-
-        // show remote URL
-        document.getElementById('remoteUrl').textContent =
-            location.origin + '/remote.html';
-
-        // particles
-        (function() {
-            const c = document.getElementById('particles');
-            for (let i = 0; i < 35; i++) {
-                const p = document.createElement('div');
-                p.classList.add('particle');
-                const size = Math.random() * 6 + 2;
-                p.style.width = size + 'px'; p.style.height = size + 'px';
-                p.style.left = Math.random() * 100 + '%';
-                p.style.animationDuration = (Math.random() * 15 + 10) + 's';
-                p.style.animationDelay = (Math.random() * 10) + 's';
-                c.appendChild(p);
+    // ============================================================
+    //  Minimal QR Code generator (no dependencies)
+    //  Supports alphanumeric up to ~150 chars, error correction L
+    // ============================================================
+    const QR = (() => {
+        // QR code generator - simplified for URLs
+        function generate(text, canvas, cellSize = 4) {
+            // Use a well-known compact QR encoding approach
+            const modules = createQR(text);
+            const size = modules.length;
+            const totalSize = size * cellSize;
+            canvas.width = totalSize;
+            canvas.height = totalSize;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, totalSize, totalSize);
+            ctx.fillStyle = '#000000';
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (modules[y][x]) {
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                }
             }
-        })();
-
-        function pad(n) { return String(n).padStart(2, '0'); }
-
-        // clock
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('currentTime').textContent =
-                pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-        }, 1000);
-
-        // alarm
-        function playAlarm() {
-            try {
-                const ctx = new AudioContext();
-                [880,1108,880,1108,880,0,880,1108,880,1108,880].forEach((f,i) => {
-                    if (!f) return;
-                    const o = ctx.createOscillator(), g = ctx.createGain();
-                    o.type = 'sine'; o.frequency.value = f;
-                    g.gain.setValueAtTime(0.3, ctx.currentTime + i*0.2);
-                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.2 + 0.18);
-                    o.connect(g); g.connect(ctx.destination);
-                    o.start(ctx.currentTime + i*0.2);
-                    o.stop(ctx.currentTime + i*0.2 + 0.2);
-                });
-            } catch(e) {}
         }
 
-        let prevStatus = 'stopped';
+        function createQR(text) {
+            // Encode as byte mode QR, version chosen by length
+            const data = encodeUTF8(text);
+            const version = getMinVersion(data.length);
+            const size = version * 4 + 17;
+            const modules = Array.from({length: size}, () => Array(size).fill(null));
+            const reserved = Array.from({length: size}, () => Array(size).fill(false));
 
-        socket.on('state', (state) => {
-            // theme
-            document.body.className = 'theme-' + state.theme;
+            // Function patterns
+            placeFinderPattern(modules, reserved, 0, 0);
+            placeFinderPattern(modules, reserved, size - 7, 0);
+            placeFinderPattern(modules, reserved, 0, size - 7);
 
-            // event name
-            el.eventName.textContent = state.eventName || '';
-
-            // digits
-            const sec = Math.max(0, state.remainingSeconds);
-            el.hours.textContent   = pad(Math.floor(sec / 3600));
-            el.minutes.textContent = pad(Math.floor((sec % 3600) / 60));
-            el.seconds.textContent = pad(sec % 60);
-
-            // ring
-            const progress = state.totalSeconds > 0 ? (state.totalSeconds - sec) / state.totalSeconds : 0;
-            el.ring.style.strokeDashoffset = circumference * (1 - progress);
-
-            // blink separators only when running
-            document.querySelectorAll('.separator').forEach(s => {
-                s.classList.toggle('blinking', state.status === 'running');
-            });
-
-            // urgency
-            el.display.classList.remove('urgent', 'warning', 'finished');
-            if (state.status === 'running') {
-                if (sec <= 60) el.display.classList.add('urgent');
-                else if (sec <= 300) el.display.classList.add('warning');
+            // Timing patterns
+            for (let i = 8; i < size - 8; i++) {
+                setModule(modules, reserved, 6, i, i % 2 === 0);
+                setModule(modules, reserved, i, 6, i % 2 === 0);
             }
 
-            // finished
-            if (state.status === 'finished') {
-                el.display.classList.add('finished');
-                el.finText.classList.add('show');
-                el.statusText.textContent = 'Czas dobiegł końca!';
-                document.title = 'CZAS MINĄŁ!';
-                if (prevStatus !== 'finished') playAlarm();
-            } else {
-                el.finText.classList.remove('show');
-            }
-
-            // status text
-            if (state.status === 'running') {
-                if (state.mode === 'target') {
-                    el.statusText.textContent = `Odliczanie do ${pad(state.targetInput.h)}:${pad(state.targetInput.m)}`;
-                } else {
-                    el.statusText.textContent = 'Odliczanie w toku...';
+            // Alignment patterns
+            const alignPos = getAlignmentPositions(version);
+            for (const r of alignPos) {
+                for (const c of alignPos) {
+                    if (reserved[r] && reserved[r][c]) continue;
+                    if ((r < 9 && c < 9) || (r < 9 && c > size - 9) || (r > size - 9 && c < 9)) continue;
+                    placeAlignmentPattern(modules, reserved, r, c);
                 }
-                document.title = `${pad(Math.floor(sec/3600))}:${pad(Math.floor((sec%3600)/60))}:${pad(sec%60)} - Timer`;
-            } else if (state.status === 'paused') {
-                el.statusText.textContent = 'PAUZA';
-            } else if (state.status === 'stopped') {
-                el.statusText.textContent = 'Oczekiwanie na start...';
-                document.title = 'Hackathon Timer';
             }
 
-            // hide waiting message when running
-            el.waitingMsg.style.display = (state.status === 'stopped') ? 'block' : 'none';
+            // Format + version info reserved
+            reserveFormatArea(modules, reserved, size);
+            if (version >= 7) reserveVersionArea(modules, reserved, size);
 
-            prevStatus = state.status;
+            // Dark module
+            setModule(modules, reserved, size - 8, 8, true);
+
+            // Data encoding
+            const ecInfo = getECInfo(version);
+            const bits = encodeData(data, version, ecInfo);
+            placeData(modules, reserved, bits, size);
+
+            // Best mask
+            let bestMask = 0, bestPenalty = Infinity;
+            for (let m = 0; m < 8; m++) {
+                const copy = modules.map(r => [...r]);
+                applyMask(copy, reserved, m, size);
+                placeFormatInfo(copy, m, size);
+                if (version >= 7) placeVersionInfo(copy, version, size);
+                const p = calcPenalty(copy, size);
+                if (p < bestPenalty) { bestPenalty = p; bestMask = m; }
+            }
+
+            applyMask(modules, reserved, bestMask, size);
+            placeFormatInfo(modules, bestMask, size);
+            if (version >= 7) placeVersionInfo(modules, version, size);
+
+            return modules;
+        }
+
+        function encodeUTF8(str) {
+            const bytes = [];
+            for (let i = 0; i < str.length; i++) {
+                const c = str.charCodeAt(i);
+                if (c < 128) bytes.push(c);
+                else if (c < 2048) { bytes.push(192 | (c >> 6)); bytes.push(128 | (c & 63)); }
+                else { bytes.push(224 | (c >> 12)); bytes.push(128 | ((c >> 6) & 63)); bytes.push(128 | (c & 63)); }
+            }
+            return bytes;
+        }
+
+        function getMinVersion(byteLen) {
+            // Byte mode capacity with EC level L
+            const caps = [0,17,32,53,78,106,134,154,192,230,271,321,367,425,458,520,586,644,718,792,858,929,1003,1091,1171,1273,1367,1465,1528,1628,1732,1840,1952,2068,2188,2303,2431,2563,2699,2809,2953];
+            for (let v = 1; v <= 40; v++) {
+                if (caps[v] >= byteLen) return v;
+            }
+            return 40;
+        }
+
+        function setModule(modules, reserved, r, c, val) {
+            modules[r][c] = val;
+            reserved[r][c] = true;
+        }
+
+        function placeFinderPattern(modules, reserved, row, col) {
+            for (let dr = -1; dr <= 7; dr++) {
+                for (let dc = -1; dc <= 7; dc++) {
+                    const r = row + dr, c = col + dc;
+                    if (r < 0 || c < 0 || r >= modules.length || c >= modules.length) continue;
+                    const inOuter = dr === 0 || dr === 6 || dc === 0 || dc === 6;
+                    const inInner = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+                    const isBorder = dr === -1 || dr === 7 || dc === -1 || dc === 7;
+                    setModule(modules, reserved, r, c, !isBorder && (inOuter || inInner));
+                }
+            }
+        }
+
+        function placeAlignmentPattern(modules, reserved, row, col) {
+            for (let dr = -2; dr <= 2; dr++) {
+                for (let dc = -2; dc <= 2; dc++) {
+                    const val = Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0);
+                    setModule(modules, reserved, row + dr, col + dc, val);
+                }
+            }
+        }
+
+        function getAlignmentPositions(version) {
+            if (version === 1) return [];
+            const positions = [6];
+            const last = version * 4 + 10;
+            const count = Math.floor(version / 7) + 2;
+            const step = Math.ceil((last - 6) / (count - 1));
+            for (let i = 1; i < count; i++) {
+                positions.push(6 + i * step > last ? last : Math.min(6 + i * step, last));
+            }
+            positions[positions.length - 1] = last;
+            // recalculate evenly
+            if (count > 2) {
+                const s = Math.ceil((last - 6) / (count - 1) / 2) * 2;
+                const pos2 = [6];
+                for (let i = count - 2; i >= 1; i--) {
+                    pos2.unshift(last - (count - 1 - i) * s);
+                }
+                pos2.push(last);
+                return pos2;
+            }
+            return positions;
+        }
+
+        function reserveFormatArea(modules, reserved, size) {
+            for (let i = 0; i < 9; i++) {
+                if (i < size) reserved[8][i] = true;
+                if (i < size) reserved[i][8] = true;
+            }
+            for (let i = 0; i < 8; i++) {
+                reserved[8][size - 1 - i] = true;
+                reserved[size - 1 - i][8] = true;
+            }
+        }
+
+        function reserveVersionArea(modules, reserved, size) {
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 3; j++) {
+                    reserved[i][size - 11 + j] = true;
+                    reserved[size - 11 + j][i] = true;
+                }
+            }
+        }
+
+        function getECInfo(version) {
+            // Simplified - returns total codewords and EC codewords per block for EC level L
+            // Format: [totalDataCodewords, ecCodewordsPerBlock, numBlocks]
+            const table = {
+                1:[19,7,1],2:[34,10,1],3:[55,15,1],4:[80,20,1],5:[108,26,1],
+                6:[136,18,2],7:[156,20,2],8:[194,24,2],9:[232,30,2],10:[274,18,4],
+                11:[324,20,4],12:[370,24,4],13:[428,26,4],14:[461,30,4],15:[523,22,6],
+                16:[589,24,6],17:[647,28,6],18:[721,30,6],19:[795,28,7],20:[861,28,8],
+                21:[932,28,8],22:[1006,28,9],23:[1094,30,9],24:[1174,30,10],25:[1276,26,12],
+                26:[1370,28,12],27:[1468,30,12],28:[1531,30,13],29:[1631,30,14],30:[1735,30,15],
+                31:[1843,30,16],32:[1955,30,17],33:[2071,30,18],34:[2191,30,19],35:[2306,30,20],
+                36:[2434,30,21],37:[2566,30,22],38:[2702,30,23],39:[2812,30,24],40:[2956,30,25],
+            };
+            return table[version] || table[1];
+        }
+
+        function encodeData(data, version, ecInfo) {
+            const [totalData] = ecInfo;
+            const bits = [];
+
+            // Mode indicator (byte = 0100)
+            bits.push(0,1,0,0);
+
+            // Character count (byte mode)
+            const ccBits = version <= 9 ? 8 : 16;
+            for (let i = ccBits - 1; i >= 0; i--) bits.push((data.length >> i) & 1);
+
+            // Data
+            for (const b of data) {
+                for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
+            }
+
+            // Terminator
+            const capacity = totalData * 8;
+            const termLen = Math.min(4, capacity - bits.length);
+            for (let i = 0; i < termLen; i++) bits.push(0);
+
+            // Pad to byte boundary
+            while (bits.length % 8 !== 0) bits.push(0);
+
+            // Pad codewords
+            const padWords = [0xEC, 0x11];
+            let padIdx = 0;
+            while (bits.length < capacity) {
+                const w = padWords[padIdx % 2];
+                for (let i = 7; i >= 0; i--) bits.push((w >> i) & 1);
+                padIdx++;
+            }
+
+            // Add EC (simplified Reed-Solomon)
+            const codewords = [];
+            for (let i = 0; i < bits.length; i += 8) {
+                let val = 0;
+                for (let j = 0; j < 8; j++) val = (val << 1) | (bits[i+j] || 0);
+                codewords.push(val);
+            }
+
+            const [, ecPerBlock, numBlocks] = ecInfo;
+            const dataPerBlock = Math.floor(totalData / numBlocks);
+            const remainder = totalData % numBlocks;
+
+            const dataBlocks = [];
+            const ecBlocks = [];
+            let offset = 0;
+
+            for (let b = 0; b < numBlocks; b++) {
+                const blockLen = dataPerBlock + (b >= numBlocks - remainder ? 1 : 0);
+                const block = codewords.slice(offset, offset + blockLen);
+                dataBlocks.push(block);
+                ecBlocks.push(computeEC(block, ecPerBlock));
+                offset += blockLen;
+            }
+
+            // Interleave
+            const result = [];
+            const maxDataLen = Math.max(...dataBlocks.map(b => b.length));
+            for (let i = 0; i < maxDataLen; i++) {
+                for (const block of dataBlocks) {
+                    if (i < block.length) {
+                        for (let j = 7; j >= 0; j--) result.push((block[i] >> j) & 1);
+                    }
+                }
+            }
+            for (let i = 0; i < ecPerBlock; i++) {
+                for (const block of ecBlocks) {
+                    if (i < block.length) {
+                        for (let j = 7; j >= 0; j--) result.push((block[i] >> j) & 1);
+                    }
+                }
+            }
+
+            // Remainder bits
+            const remainderBits = [0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
+            for (let i = 0; i < (remainderBits[version] || 0); i++) result.push(0);
+
+            return result;
+        }
+
+        // GF(256) arithmetic for Reed-Solomon
+        const GF_EXP = new Array(512);
+        const GF_LOG = new Array(256);
+        (function initGF() {
+            let x = 1;
+            for (let i = 0; i < 255; i++) {
+                GF_EXP[i] = x;
+                GF_LOG[x] = i;
+                x <<= 1;
+                if (x >= 256) x ^= 0x11d;
+            }
+            for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+        })();
+
+        function gfMul(a, b) {
+            if (a === 0 || b === 0) return 0;
+            return GF_EXP[GF_LOG[a] + GF_LOG[b]];
+        }
+
+        function computeEC(data, ecLen) {
+            // Generator polynomial
+            let gen = [1];
+            for (let i = 0; i < ecLen; i++) {
+                const newGen = new Array(gen.length + 1).fill(0);
+                for (let j = 0; j < gen.length; j++) {
+                    newGen[j] ^= gen[j];
+                    newGen[j + 1] ^= gfMul(gen[j], GF_EXP[i]);
+                }
+                gen = newGen;
+            }
+
+            const msg = [...data, ...new Array(ecLen).fill(0)];
+            for (let i = 0; i < data.length; i++) {
+                const coef = msg[i];
+                if (coef !== 0) {
+                    for (let j = 1; j < gen.length; j++) {
+                        msg[i + j] ^= gfMul(gen[j], coef);
+                    }
+                }
+            }
+            return msg.slice(data.length);
+        }
+
+        function placeData(modules, reserved, bits, size) {
+            let bitIdx = 0;
+            let upward = true;
+            for (let right = size - 1; right >= 1; right -= 2) {
+                if (right === 6) right = 5; // skip timing column
+                const cols = [right, right - 1];
+                const rows = upward
+                    ? Array.from({length: size}, (_, i) => size - 1 - i)
+                    : Array.from({length: size}, (_, i) => i);
+                for (const row of rows) {
+                    for (const col of cols) {
+                        if (col < 0 || col >= size) continue;
+                        if (reserved[row][col]) continue;
+                        modules[row][col] = bitIdx < bits.length ? !!bits[bitIdx] : false;
+                        bitIdx++;
+                    }
+                }
+                upward = !upward;
+            }
+        }
+
+        function applyMask(modules, reserved, mask, size) {
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (reserved[r][c]) continue;
+                    let invert = false;
+                    switch (mask) {
+                        case 0: invert = (r + c) % 2 === 0; break;
+                        case 1: invert = r % 2 === 0; break;
+                        case 2: invert = c % 3 === 0; break;
+                        case 3: invert = (r + c) % 3 === 0; break;
+                        case 4: invert = (Math.floor(r/2) + Math.floor(c/3)) % 2 === 0; break;
+                        case 5: invert = (r*c)%2 + (r*c)%3 === 0; break;
+                        case 6: invert = ((r*c)%2 + (r*c)%3) % 2 === 0; break;
+                        case 7: invert = ((r+c)%2 + (r*c)%3) % 2 === 0; break;
+                    }
+                    if (invert) modules[r][c] = !modules[r][c];
+                }
+            }
+        }
+
+        function placeFormatInfo(modules, mask, size) {
+            const FORMAT_BITS = [
+                0x77c4,0x72f3,0x7daa,0x789d,0x662f,0x6318,0x6c41,0x6976,
+                0x5412,0x5125,0x5e7c,0x5b4b,0x45f9,0x40ce,0x4f97,0x4aa0,
+            ];
+            // EC level L = 01, mask 0-7
+            const bits = FORMAT_BITS[mask]; // L level
+            for (let i = 0; i <= 5; i++) modules[8][i] = !!((bits >> (14 - i)) & 1);
+            modules[8][7] = !!((bits >> 8) & 1);
+            modules[8][8] = !!((bits >> 7) & 1);
+            modules[7][8] = !!((bits >> 6) & 1);
+            for (let i = 0; i <= 5; i++) modules[5 - i][8] = !!((bits >> (5 - i)) & 1);
+
+            for (let i = 0; i <= 7; i++) modules[size - 1 - i][8] = !!((bits >> (14 - i)) & 1);
+            for (let i = 0; i <= 6; i++) modules[8][size - 7 + i] = !!((bits >> (6 - i)) & 1);
+        }
+
+        function placeVersionInfo(modules, version, size) {
+            if (version < 7) return;
+            const VERSION_BITS = [
+                0,0,0,0,0,0,0,
+                0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,
+                0x10B78,0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,
+                0x191E1,0x1AFAB,0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,
+                0x228BA,0x2379F,0x24B0B,0x2542E,0x26A64,0x27541,0x28C69,
+            ];
+            const bits = VERSION_BITS[version];
+            for (let i = 0; i < 18; i++) {
+                const val = !!((bits >> i) & 1);
+                const r = Math.floor(i / 3);
+                const c = size - 11 + (i % 3);
+                modules[r][c] = val;
+                modules[c][r] = val;
+            }
+        }
+
+        function calcPenalty(modules, size) {
+            let penalty = 0;
+            // Rule 1: runs of same color
+            for (let r = 0; r < size; r++) {
+                let run = 1;
+                for (let c = 1; c < size; c++) {
+                    if (modules[r][c] === modules[r][c-1]) { run++; }
+                    else { if (run >= 5) penalty += run - 2; run = 1; }
+                }
+                if (run >= 5) penalty += run - 2;
+            }
+            for (let c = 0; c < size; c++) {
+                let run = 1;
+                for (let r = 1; r < size; r++) {
+                    if (modules[r][c] === modules[r-1][c]) { run++; }
+                    else { if (run >= 5) penalty += run - 2; run = 1; }
+                }
+                if (run >= 5) penalty += run - 2;
+            }
+            return penalty;
+        }
+
+        return { generate };
+    })();
+
+    // ============================================================
+    //  MAIN APP
+    // ============================================================
+    const socket = io({ query: { role: 'display' } });
+    const circumference = 2 * Math.PI * 90;
+
+    const el = {
+        hours: document.getElementById('hours'),
+        minutes: document.getElementById('minutes'),
+        seconds: document.getElementById('seconds'),
+        ring: document.getElementById('progressRing'),
+        display: document.getElementById('timerDisplay'),
+        eventName: document.getElementById('eventName'),
+        statusText: document.getElementById('statusText'),
+        finText: document.getElementById('finishedText'),
+        connDot: document.getElementById('connDot'),
+        waitingPanel: document.getElementById('waitingPanel'),
+        clientCount: document.getElementById('clientCount'),
+    };
+
+    // Remote URL + QR
+    const remoteUrl = location.origin + '/remote.html';
+    document.getElementById('remoteUrl').textContent = remoteUrl;
+
+    try {
+        QR.generate(remoteUrl, document.getElementById('qrCanvas'), 5);
+    } catch(e) {
+        console.warn('QR generation failed:', e);
+    }
+
+    // particles
+    (function() {
+        const c = document.getElementById('particles');
+        for (let i = 0; i < 35; i++) {
+            const p = document.createElement('div');
+            p.classList.add('particle');
+            const size = Math.random() * 6 + 2;
+            p.style.width = size + 'px'; p.style.height = size + 'px';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+            p.style.animationDelay = (Math.random() * 10) + 's';
+            c.appendChild(p);
+        }
+    })();
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    // clock
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('currentTime').textContent =
+            pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    }, 1000);
+
+    // alarm
+    function playAlarm() {
+        try {
+            const ctx = new AudioContext();
+            [880,1108,880,1108,880,0,880,1108,880,1108,880].forEach((f,i) => {
+                if (!f) return;
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = 'sine'; o.frequency.value = f;
+                g.gain.setValueAtTime(0.3, ctx.currentTime + i*0.2);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.2 + 0.18);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(ctx.currentTime + i*0.2);
+                o.stop(ctx.currentTime + i*0.2 + 0.2);
+            });
+        } catch(e) {}
+    }
+
+    let prevStatus = 'stopped';
+
+    // client count
+    socket.on('clients', (counts) => {
+        el.clientCount.textContent = `${counts.remotes} pilot${counts.remotes === 1 ? '' : 'ów'} | ${counts.displays} ekran${counts.displays === 1 ? '' : 'ów'}`;
+    });
+
+    socket.on('state', (state) => {
+        // theme
+        document.body.className = 'theme-' + state.theme;
+
+        // event name
+        el.eventName.textContent = state.eventName || '';
+
+        // digits
+        const sec = Math.max(0, state.remainingSeconds);
+        el.hours.textContent   = pad(Math.floor(sec / 3600));
+        el.minutes.textContent = pad(Math.floor((sec % 3600) / 60));
+        el.seconds.textContent = pad(sec % 60);
+
+        // ring
+        const progress = state.totalSeconds > 0 ? (state.totalSeconds - sec) / state.totalSeconds : 0;
+        el.ring.style.strokeDashoffset = circumference * (1 - progress);
+
+        // blink separators only when running
+        document.querySelectorAll('.separator').forEach(s => {
+            s.classList.toggle('blinking', state.status === 'running');
         });
 
-        socket.on('connect', () => el.connDot.classList.add('connected'));
-        socket.on('disconnect', () => el.connDot.classList.remove('connected'));
+        // urgency
+        el.display.classList.remove('urgent', 'warning', 'finished');
+        if (state.status === 'running') {
+            if (sec <= 60) el.display.classList.add('urgent');
+            else if (sec <= 300) el.display.classList.add('warning');
+        }
 
-        // auto fullscreen on click
-        document.addEventListener('click', () => {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
-        });
+        // finished
+        if (state.status === 'finished') {
+            el.display.classList.add('finished');
+            el.finText.classList.add('show');
+            el.statusText.textContent = 'Czas dobiegł końca!';
+            document.title = 'CZAS MINĄŁ!';
+            if (prevStatus !== 'finished') playAlarm();
+        } else {
+            el.finText.classList.remove('show');
+        }
+
+        // status text
+        if (state.status === 'running') {
+            if (state.mode === 'target') {
+                el.statusText.textContent = `Odliczanie do ${pad(state.targetInput.h)}:${pad(state.targetInput.m)}`;
+            } else {
+                el.statusText.textContent = 'Odliczanie w toku...';
+            }
+            document.title = `${pad(Math.floor(sec/3600))}:${pad(Math.floor((sec%3600)/60))}:${pad(sec%60)} - Timer`;
+        } else if (state.status === 'paused') {
+            el.statusText.textContent = 'PAUZA';
+        } else if (state.status === 'stopped') {
+            el.statusText.textContent = 'Oczekiwanie na start...';
+            document.title = 'Hackathon Timer';
+        }
+
+        // hide QR/waiting when running
+        el.waitingPanel.style.display = (state.status === 'stopped') ? 'flex' : 'none';
+
+        prevStatus = state.status;
+    });
+
+    socket.on('connect', () => el.connDot.classList.add('connected'));
+    socket.on('disconnect', () => el.connDot.classList.remove('connected'));
+
+    // auto fullscreen on click
+    document.addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+    });
     </script>
 </body>
 </html>
