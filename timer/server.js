@@ -11,7 +11,29 @@ const io = new Server(server, {
   maxHttpBufferSize: 10e6 // 10MB for image uploads
 });
 
+// Trust proxy (for running behind nginx/reverse proxy)
+app.set('trust proxy', true);
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Health-check / status endpoint
+app.get('/status', (req, res) => {
+  res.json({
+    ok: true,
+    uptime: Math.floor(process.uptime()),
+    connections: {
+      displays: displays.size,
+      remotes: remotes.size,
+      total: displays.size + remotes.size
+    },
+    timer: {
+      running: state.timerRunning,
+      paused: state.timerPaused,
+      finished: state.timerFinished,
+      endTime: state.timerEndTime
+    }
+  });
+});
 
 // Shared state
 let state = {
@@ -42,11 +64,16 @@ let state = {
   finishImage: null,        // base64 image
   timerFinished: false,
 
-  // Timer glow style: 'none', 'soft', 'neon', 'pulse', 'fire', 'ice'
+  // Timer glow style: 'none', 'soft', 'neon', 'pulse', 'custom'
   timerGlowStyle: 'neon',
+  glowColor1: '#00ff88',
+  glowColor2: '#0088ff',
 
   // Timer display style: 'cyber', 'ring', 'classic', 'minimal', 'flip'
   timerDisplayStyle: 'cyber',
+
+  // Timer label (shown under timer, empty = hidden)
+  timerLabel: '',
 
   // Sounds
   soundEnabled: true,
@@ -76,6 +103,8 @@ function getNetworkIP() {
 }
 
 io.on('connection', (socket) => {
+  const clientIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+
   socket.on('register', (role) => {
     if (role === 'display') {
       displays.add(socket.id);
@@ -84,8 +113,11 @@ io.on('connection', (socket) => {
       remotes.add(socket.id);
       socket.role = 'remote';
     }
+    console.log(`[+] ${role} connected from ${clientIP} (displays: ${displays.size}, remotes: ${remotes.size})`);
     // Send current state
     socket.emit('state-sync', state);
+    // Broadcast connection count to all remotes
+    io.emit('connection-count', { displays: displays.size, remotes: remotes.size });
   });
 
   // Timer controls
@@ -182,14 +214,26 @@ io.on('connection', (socket) => {
   });
 
   // Timer glow style
-  socket.on('set-timer-glow', (style) => {
-    state.timerGlowStyle = style;
+  socket.on('set-timer-glow', (data) => {
+    if (typeof data === 'string') {
+      state.timerGlowStyle = data;
+    } else {
+      state.timerGlowStyle = data.style;
+      if (data.color1) state.glowColor1 = data.color1;
+      if (data.color2) state.glowColor2 = data.color2;
+    }
     io.emit('state-sync', state);
   });
 
   // Timer display style
   socket.on('set-timer-display-style', (style) => {
     state.timerDisplayStyle = style;
+    io.emit('state-sync', state);
+  });
+
+  // Timer label
+  socket.on('set-timer-label', (label) => {
+    state.timerLabel = label || '';
     io.emit('state-sync', state);
   });
 
@@ -262,8 +306,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const role = socket.role || 'unknown';
     displays.delete(socket.id);
     remotes.delete(socket.id);
+    console.log(`[-] ${role} disconnected from ${clientIP} (displays: ${displays.size}, remotes: ${remotes.size})`);
+    io.emit('connection-count', { displays: displays.size, remotes: remotes.size });
   });
 });
 

@@ -18,6 +18,8 @@
     justify-content: center;
     transition: background 1s ease;
     cursor: none;
+    margin: 0;
+    padding: 0;
   }
 
   /* === BACKGROUNDS === */
@@ -58,6 +60,10 @@
     position: relative;
     z-index: 10;
     text-align: center;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .timer-display {
@@ -107,21 +113,12 @@
         0 0 200px currentColor;
     }
   }
-  .glow-fire .timer-display {
+  .glow-custom .timer-display {
     text-shadow:
-      0 0 10px #ff4400,
-      0 0 30px #ff6600,
-      0 0 60px #ff8800,
-      0 0 100px #ffaa00,
-      0 2px 4px rgba(0,0,0,0.8);
-  }
-  .glow-ice .timer-display {
-    text-shadow:
-      0 0 10px #00ccff,
-      0 0 30px #00aaff,
-      0 0 60px #0088ff,
-      0 0 100px #4400ff,
-      0 2px 4px rgba(0,0,0,0.8);
+      0 0 10px var(--glow-color1, currentColor),
+      0 0 30px var(--glow-color1, currentColor),
+      0 0 60px var(--glow-color2, currentColor),
+      0 0 100px var(--glow-color2, currentColor);
   }
 
   .timer-label {
@@ -196,7 +193,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,0.9);
+    background: #000000;
     animation: finishFadeIn 0.5s ease;
   }
   .finish-overlay.active { display: flex; }
@@ -205,27 +202,29 @@
   }
   .finish-message {
     font-family: 'Orbitron', monospace;
-    font-size: clamp(40px, 10vw, 150px);
+    font-size: clamp(40px, 10vw, 120px);
     font-weight: 900;
-    color: #ff0040;
-    text-shadow: 0 0 30px #ff0040, 0 0 60px #ff0040, 0 0 120px #ff0040;
+    color: #ffffff;
+    text-shadow: none;
     text-align: center;
-    animation: finishPulse 1.5s ease-in-out infinite;
     padding: 0 20px;
+    transition: opacity 0.5s ease;
   }
-  @keyframes finishPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
+  .finish-message.hidden { opacity: 0; pointer-events: none; }
   .finish-image {
-    max-width: 50vw;
-    max-height: 40vh;
-    margin-top: 30px;
-    border-radius: 15px;
-    box-shadow: 0 0 40px rgba(255,0,64,0.5);
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: contain;
+    border-radius: 0;
+    box-shadow: none;
     display: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
   }
-  .finish-image.active { display: block; }
+  .finish-image.active {
+    display: block;
+    opacity: 1;
+  }
 
   /* === ANNOUNCEMENT === */
   .announcement-bar {
@@ -279,8 +278,9 @@
   /* === TIMER STYLE SWITCHING === */
   .style-cyber, .style-ring, .style-classic, .style-minimal, .style-flip {
     display: none;
+    width: 100%;
   }
-  .style-active { display: block !important; }
+  .style-active { display: flex !important; flex-direction: column; align-items: center; justify-content: center; }
 
   /* === RING STYLE === */
   .ring-wrapper {
@@ -395,7 +395,7 @@
   }
 
   /* === MINIMAL STYLE === */
-  .style-minimal { width: 80vw; max-width: 900px; }
+  .style-minimal.style-active { width: 80vw; max-width: 900px; }
   .minimal-time {
     font-family: 'Space Mono', monospace;
     font-size: clamp(60px, 15vw, 200px);
@@ -631,6 +631,8 @@
   let warningPlayed = false;
   let dangerPlayed = false;
   let finishPlayed = false;
+  let finishImageTimeout = null;
+  let finishPhase = 0; // 0=not finished, 1=showing message, 2=showing image
 
   // Audio context for sounds
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -812,6 +814,12 @@
       document.body.style.setProperty('--custom-bg2', st.customBgColor2);
     }
 
+    // Custom glow colors
+    if (st.timerGlowStyle === 'custom') {
+      document.body.style.setProperty('--glow-color1', st.glowColor1 || '#00ff88');
+      document.body.style.setProperty('--glow-color2', st.glowColor2 || '#0088ff');
+    }
+
     // Timer display style
     switchTimerStyle(st.timerDisplayStyle || 'cyber');
 
@@ -828,20 +836,37 @@
     // Timer finished
     if (st.timerFinished) {
       finish.classList.add('active');
-      finishMsg.textContent = st.finishMessage || '⏰ CZAS MINĄŁ!';
-      if (st.finishImage) {
-        finishImg.src = st.finishImage;
-        finishImg.classList.add('active');
-      } else {
+
+      if (!finishPlayed) {
+        // Phase 1: show message on black screen
+        finishPhase = 1;
+        finishMsg.textContent = st.finishMessage || '⏰ CZAS MINĄŁ!';
+        finishMsg.classList.remove('hidden');
         finishImg.classList.remove('active');
-      }
-      if (!finishPlayed && st.soundEnabled && st.finishSound) {
-        playFinishSound();
+
+        if (st.soundEnabled && st.finishSound) {
+          playFinishSound();
+        }
         finishPlayed = true;
+
+        // After 5 seconds, transition to fullscreen image if available
+        if (finishImageTimeout) clearTimeout(finishImageTimeout);
+        if (st.finishImage) {
+          finishImageTimeout = setTimeout(() => {
+            finishPhase = 2;
+            finishMsg.classList.add('hidden');
+            finishImg.src = st.finishImage;
+            finishImg.classList.add('active');
+          }, 5000);
+        }
       }
       return;
     } else {
       finish.classList.remove('active');
+      finishMsg.classList.remove('hidden');
+      finishImg.classList.remove('active');
+      if (finishImageTimeout) { clearTimeout(finishImageTimeout); finishImageTimeout = null; }
+      finishPhase = 0;
     }
 
     if (!st.timerRunning) {
@@ -853,7 +878,7 @@
         bar.style.width = '100%';
         bar.style.backgroundColor = defaultColor;
       }
-      setAllLabels(st.timerPaused ? '⏸ PAUZA' : 'HACKATHON TIMER');
+      setAllLabels(st.timerPaused ? '⏸ PAUZA' : (st.timerLabel || ''));
       finishPlayed = false;
       warningPlayed = false;
       dangerPlayed = false;

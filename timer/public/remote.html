@@ -422,56 +422,26 @@
     letter-spacing: 0.05em;
   }
 
-  /* === GLOW PICKER === */
-  .glow-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+  /* === GLOW SWITCHER === */
+  .glow-switcher {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 12px;
   }
-  .glow-option {
-    aspect-ratio: 2/1;
-    border-radius: 10px;
-    cursor: pointer;
-    border: 2px solid var(--card-border);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    background: rgba(0,0,0,0.4);
-    overflow: hidden;
-  }
-  .glow-option:hover { transform: scale(1.03); }
-  .glow-option.active {
-    border-color: var(--primary);
-    box-shadow: 0 0 12px rgba(0,255,136,0.3);
-  }
-  .glow-option .glow-preview {
-    font-family: 'Orbitron', monospace;
-    font-size: 16px;
-    font-weight: 900;
-    color: #00ff88;
-  }
-  .glow-option .glow-name {
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-top: 3px;
-    text-transform: uppercase;
+  .glow-current {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
     letter-spacing: 0.05em;
   }
-  /* Preview effects */
-  .glow-option[data-glow="none"] .glow-preview { text-shadow: none; }
-  .glow-option[data-glow="soft"] .glow-preview { text-shadow: 0 0 6px #00ff88, 0 0 12px rgba(255,255,255,0.1); }
-  .glow-option[data-glow="neon"] .glow-preview { text-shadow: 0 0 6px #00ff88, 0 0 15px #00ff88, 0 0 30px #00ff88; }
-  .glow-option[data-glow="pulse"] .glow-preview { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88; animation: glowPulsePreview 2s ease-in-out infinite; }
-  .glow-option[data-glow="fire"] .glow-preview { color: #ff6600; text-shadow: 0 0 6px #ff4400, 0 0 15px #ff6600, 0 0 30px #ff8800; }
-  .glow-option[data-glow="ice"] .glow-preview { color: #00ccff; text-shadow: 0 0 6px #00ccff, 0 0 15px #00aaff, 0 0 30px #0088ff; }
-  @keyframes glowPulsePreview {
-    0%, 100% { text-shadow: 0 0 4px #00ff88, 0 0 10px #00ff88; }
-    50% { text-shadow: 0 0 10px #00ff88, 0 0 25px #00ff88, 0 0 50px #00ff88; }
+  .glow-custom-colors {
+    display: none;
+    margin-top: 8px;
   }
+  .glow-custom-colors.visible { display: block; }
 </style>
 </head>
 <body>
@@ -567,13 +537,37 @@
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
+    <label>Napis pod timerem</label>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" id="timerLabelInput" placeholder="np. HACKATHON 2026 (puste = brak)" style="flex:1;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;">
+      <button class="btn btn-primary" onclick="setTimerLabel()" style="white-space:nowrap;">Ustaw</button>
+    </div>
+
+    <div class="divider"></div>
+
     <label>Styl wyświetlania timera</label>
     <div class="display-style-grid" id="displayStyleGrid"></div>
 
     <div class="divider"></div>
 
-    <label>Styl świecenia timera</label>
-    <div class="glow-grid" id="glowGrid"></div>
+    <label>Świecenie timera</label>
+    <div class="glow-switcher">
+      <button class="btn btn-outline btn-icon" onclick="cycleGlow(-1)">◀</button>
+      <span class="glow-current" id="glowCurrentName">Neon</span>
+      <button class="btn btn-outline btn-icon" onclick="cycleGlow(1)">▶</button>
+    </div>
+    <div class="glow-custom-colors" id="glowCustomColors">
+      <div class="color-pair">
+        <div>
+          <label>Glow kolor 1</label>
+          <input type="color" id="glowColor1" value="#00ff88" onchange="updateGlowColors()">
+        </div>
+        <div>
+          <label>Glow kolor 2</label>
+          <input type="color" id="glowColor2" value="#0088ff" onchange="updateGlowColors()">
+        </div>
+      </div>
+    </div>
 
     <label>Kolor timera (normalny)</label>
     <input type="color" id="timerColor" value="#00ff88" onchange="updateTimerColors()">
@@ -845,28 +839,63 @@
 
   // === GLOW STYLES ===
   const glowStyles = [
-    { id: 'none', name: 'Brak', preview: '12:34' },
-    { id: 'soft', name: 'Miękki', preview: '12:34' },
-    { id: 'neon', name: 'Neon', preview: '12:34' },
-    { id: 'pulse', name: 'Pulsujący', preview: '12:34' },
-    { id: 'fire', name: 'Ogień', preview: '12:34' },
-    { id: 'ice', name: 'Lód', preview: '12:34' },
+    { id: 'none', name: 'Brak' },
+    { id: 'soft', name: 'Miękki' },
+    { id: 'neon', name: 'Neon' },
+    { id: 'pulse', name: 'Pulsujący' },
+    { id: 'custom', name: 'Własny kolor' },
   ];
 
-  function renderGlowGrid() {
-    const grid = document.getElementById('glowGrid');
-    grid.innerHTML = '';
-    glowStyles.forEach(g => {
-      const div = document.createElement('div');
-      div.className = 'glow-option' + ((currentState.timerGlowStyle || 'neon') === g.id ? ' active' : '');
-      div.setAttribute('data-glow', g.id);
-      div.innerHTML = `<span class="glow-preview">${g.preview}</span><span class="glow-name">${g.name}</span>`;
-      div.onclick = () => {
-        socket.emit('set-timer-glow', g.id);
-        document.querySelectorAll('.glow-option').forEach(el => el.classList.remove('active'));
-        div.classList.add('active');
-      };
-      grid.appendChild(div);
+  function getGlowIndex() {
+    const active = currentState.timerGlowStyle || 'neon';
+    const idx = glowStyles.findIndex(g => g.id === active);
+    return idx >= 0 ? idx : 2;
+  }
+
+  function cycleGlow(dir) {
+    let idx = getGlowIndex() + dir;
+    if (idx < 0) idx = glowStyles.length - 1;
+    if (idx >= glowStyles.length) idx = 0;
+    const g = glowStyles[idx];
+    if (g.id === 'custom') {
+      socket.emit('set-timer-glow', {
+        style: 'custom',
+        color1: document.getElementById('glowColor1').value,
+        color2: document.getElementById('glowColor2').value,
+      });
+    } else {
+      socket.emit('set-timer-glow', g.id);
+    }
+    updateGlowDisplay(g);
+  }
+
+  function updateGlowDisplay(g) {
+    if (!g) g = glowStyles[getGlowIndex()];
+    document.getElementById('glowCurrentName').textContent = g.name;
+    const el = document.getElementById('glowCustomColors');
+    if (g.id === 'custom') el.classList.add('visible');
+    else el.classList.remove('visible');
+  }
+
+  function syncGlowUI() {
+    updateGlowDisplay(glowStyles[getGlowIndex()]);
+  }
+
+  // === TIMER LABEL ===
+  function setTimerLabel() {
+    const label = document.getElementById('timerLabelInput').value;
+    socket.emit('set-timer-label', label);
+  }
+  // Enter key support
+  document.getElementById('timerLabelInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') setTimerLabel();
+  });
+
+  function updateGlowColors() {
+    socket.emit('set-timer-glow', {
+      style: 'custom',
+      color1: document.getElementById('glowColor1').value,
+      color2: document.getElementById('glowColor2').value,
     });
   }
 
@@ -1056,7 +1085,7 @@
     currentState = state;
     renderBgGrid();
     renderDisplayStyleGrid();
-    renderGlowGrid();
+    syncGlowUI();
     updateRemoteTimer();
 
     // Sync form values
@@ -1066,6 +1095,9 @@
     document.getElementById('warningThreshold').value = state.warningThreshold || 300;
     document.getElementById('dangerThreshold').value = state.dangerThreshold || 60;
     document.getElementById('finishMessage').value = state.finishMessage || '⏰ CZAS MINĄŁ!';
+    document.getElementById('timerLabelInput').value = state.timerLabel || '';
+    document.getElementById('glowColor1').value = state.glowColor1 || '#00ff88';
+    document.getElementById('glowColor2').value = state.glowColor2 || '#0088ff';
     document.getElementById('soundEnabled').checked = state.soundEnabled !== false;
     document.getElementById('warningSound').checked = state.warningSound !== false;
     document.getElementById('finishSound').checked = state.finishSound !== false;
@@ -1088,7 +1120,7 @@
   // Init
   renderBgGrid();
   renderDisplayStyleGrid();
-  renderGlowGrid();
+  syncGlowUI();
 </script>
 </body>
 </html>
