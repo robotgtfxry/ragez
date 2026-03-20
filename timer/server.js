@@ -56,15 +56,15 @@ let state = {
   timerDangerColor: '#ff0040',
   warningThreshold: 300,    // seconds - when to show warning (5 min)
   dangerThreshold: 60,      // seconds - when to show danger (1 min)
-  warningMessage: '⚠ CZAS SIĘ KOŃCZY ⚠',
-  dangerMessage: '🚨 OSTATNIE SEKUNDY! 🚨',
-  pauseMessage: '⏸ PAUZA',
+  warningMessage: 'CZAS SIE KONCZY',
+  dangerMessage: 'OSTATNIE SEKUNDY!',
+  pauseMessage: 'PAUZA',
 
   // Announcements
   announcement: null,       // { text, textColor, bgColor, duration, fontSize }
 
   // Finish message
-  finishMessage: '⏰ CZAS MINĄŁ!',
+  finishMessage: 'CZAS MINAL!',
   finishImage: null,        // base64 image
   timerFinished: false,
 
@@ -75,6 +75,7 @@ let state = {
 
   // Timer display style: 'cyber', 'ring', 'classic', 'minimal', 'flip'
   timerDisplayStyle: 'cyber',
+  ringVariant: 'classic',
 
   // Timer label (shown under timer, empty = hidden)
   timerLabel: '',
@@ -252,6 +253,12 @@ io.on('connection', (socket) => {
     io.emit('state-sync', state);
   });
 
+  // Ring variant
+  socket.on('set-ring-variant', (variant) => {
+    state.ringVariant = variant;
+    io.emit('state-sync', state);
+  });
+
   // Timer label
   socket.on('set-timer-label', (label) => {
     state.timerLabel = label || '';
@@ -352,11 +359,11 @@ const IP = getNetworkIP();
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
-  console.log('🎯 Hackathon Timer Server');
+  console.log('Hackathon Timer Server');
   console.log('========================');
-  console.log(`📺 Ekran projektora: http://${IP}:${PORT}/display.html`);
-  console.log(`🎮 Pilot (remote):   http://${IP}:${PORT}/remote.html`);
-  console.log(`📡 Lokalnie:         http://localhost:${PORT}`);
+  console.log(`Ekran projektora: http://${IP}:${PORT}/display.html`);
+  console.log(`Pilot (remote):   http://${IP}:${PORT}/remote.html`);
+  console.log(`Lokalnie:         http://localhost:${PORT}`);
   console.log('========================');
   console.log('');
 });

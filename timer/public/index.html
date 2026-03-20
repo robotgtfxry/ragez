@@ -1,890 +1,349 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hackathon Timer - Display</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hackathon Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
+    font-family: 'Rajdhani', sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
 
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Outfit', sans-serif;
-            color: #fff;
-            overflow: hidden;
-            transition: background 0.8s ease;
-            cursor: none;
-        }
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
 
-        /* ===== THEMES ===== */
-        body.theme-cosmic   { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
-        body.theme-sunset   { background: linear-gradient(135deg, #1a0a2e, #6b2fa0, #d63384, #ff6a00); }
-        body.theme-ocean    { background: linear-gradient(135deg, #001d3d, #003566, #006d77, #0db39e); }
-        body.theme-forest   { background: linear-gradient(135deg, #0b1a0f, #1b4332, #2d6a4f, #40916c); }
-        body.theme-fire     { background: linear-gradient(135deg, #1a0000, #5c0a0a, #b91c1c, #f59e0b); }
-        body.theme-neon     { background: linear-gradient(135deg, #0a0a0a, #1a002e, #0a0a2e, #0a0a0a); }
-        body.theme-arctic   { background: linear-gradient(135deg, #0c1445, #1e3a5f, #4a90d9, #a0d2db); }
-        body.theme-midnight { background: linear-gradient(135deg, #020024, #090979, #00d4ff); }
-        body.theme-cherry   { background: linear-gradient(135deg, #1a0011, #4a0028, #8b1a4a, #c2185b); }
-        body.theme-matrix   { background: linear-gradient(135deg, #000000, #001a00, #003300, #000000); }
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    width: 100%;
+    max-width: 480px;
+    padding: 20px;
+  }
 
-        body.theme-neon .time-card { border-color: rgba(0,255,136,0.3); box-shadow: 0 0 40px rgba(0,255,136,0.1); }
-        body.theme-neon .time-card .digits { -webkit-text-fill-color: #00ff88; text-shadow: 0 0 30px rgba(0,255,136,0.5); }
-        body.theme-matrix .time-card .digits { -webkit-text-fill-color: #00ff41; text-shadow: 0 0 30px rgba(0,255,65,0.5); }
+  .title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 6vw, 42px);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #00ff88, #00cc66);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
-        /* particles */
-        .bg-particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-        .particle {
-            position: absolute; border-radius: 50%;
-            background: rgba(255,255,255,0.06);
-            animation: float linear infinite;
-        }
-        @keyframes float {
-            0%   { transform: translateY(100vh) scale(0); opacity: 0; }
-            10%  { opacity: 1; }
-            90%  { opacity: 1; }
-            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
-        }
+  .subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
 
-        .container {
-            position: relative; z-index: 1;
-            text-align: center; padding: 2rem;
-            width: 100%;
-        }
+  .cards {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+  }
 
-        .event-name {
-            font-size: 2rem;
-            font-weight: 300;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.5);
-            margin-bottom: 0.5rem;
-            min-height: 2.5rem;
-        }
+  .card {
+    flex: 1;
+    max-width: 200px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 32px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
 
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 300;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+  .card:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
 
-        .status-text {
-            font-size: 1rem;
-            color: rgba(255,255,255,0.35);
-            margin-bottom: 2rem;
-            letter-spacing: 0.15em;
-            min-height: 1.5rem;
-        }
+  .card-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-        /* progress ring */
-        .progress-container { display: flex; justify-content: center; margin-bottom: 2rem; }
-        .progress-ring { transform: rotate(-90deg); }
-        .progress-ring__bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
-        .progress-ring__fill {
-            fill: none; stroke: url(#gradient); stroke-width: 8;
-            stroke-linecap: round; transition: stroke-dashoffset 0.5s ease;
-        }
+  .card-icon svg {
+    width: 32px;
+    height: 32px;
+  }
 
-        /* timer */
-        .timer-display {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
+  .card-display .card-icon {
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.2);
+  }
+  .card-display .card-icon svg { stroke: #00ff88; }
+  .card-display:hover {
+    border-color: rgba(0,255,136,0.3);
+    box-shadow: 0 12px 40px rgba(0,255,136,0.1);
+  }
 
-        .time-card {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 24px;
-            padding: 1.5rem 2rem;
-            min-width: 150px;
-            transition: all 0.4s;
-        }
+  .card-panel .card-icon {
+    background: rgba(100,140,255,0.1);
+    border: 1px solid rgba(100,140,255,0.2);
+  }
+  .card-panel .card-icon svg { stroke: #648cff; }
+  .card-panel:hover {
+    border-color: rgba(100,140,255,0.3);
+    box-shadow: 0 12px 40px rgba(100,140,255,0.1);
+  }
 
-        .time-card .digits {
-            font-size: 5.5rem;
-            font-weight: 700;
-            line-height: 1;
-            background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-family: 'JetBrains Mono', monospace;
-        }
+  .card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
 
-        .time-card .label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.25em;
-            color: rgba(255,255,255,0.3);
-            margin-top: 0.6rem;
-        }
+  .card-desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    line-height: 1.4;
+  }
 
-        .separator {
-            font-size: 5rem;
-            font-weight: 300;
-            color: rgba(255,255,255,0.2);
-            align-self: center;
-            padding-bottom: 1.5rem;
-        }
+  /* === PASSWORD OVERLAY === */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .overlay.visible {
+    display: flex;
+  }
 
-        .separator.blinking { animation: blink 1s ease-in-out infinite; }
-        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+  .password-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+  }
 
-        .current-time {
-            font-size: 1.1rem;
-            color: rgba(255,255,255,0.25);
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 0.1em;
-        }
+  .password-box h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    color: #648cff;
+  }
 
-        /* states */
-        .urgent .time-card { border-color: rgba(239,68,68,0.4); animation: urgent-pulse 0.8s ease-in-out infinite; }
-        .urgent .time-card .digits { -webkit-text-fill-color: #ef4444; text-shadow: 0 0 30px rgba(239,68,68,0.4); }
-        @keyframes urgent-pulse {
-            0%,100% { box-shadow: 0 0 20px rgba(239,68,68,0.1); }
-            50% { box-shadow: 0 0 60px rgba(239,68,68,0.35); }
-        }
+  .password-box p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 24px;
+  }
 
-        .warning .time-card { border-color: rgba(245,158,11,0.3); }
-        .warning .time-card .digits { -webkit-text-fill-color: #f59e0b; text-shadow: 0 0 20px rgba(245,158,11,0.3); }
+  .password-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  .password-input:focus {
+    border-color: #648cff;
+    box-shadow: 0 0 20px rgba(100,140,255,0.15);
+  }
+  .password-input.error {
+    border-color: #ff4444;
+    animation: shake 0.4s ease;
+  }
 
-        .finished .time-card { border-color: rgba(52,211,153,0.4); animation: finish-pulse 1.5s ease-in-out infinite; }
-        @keyframes finish-pulse {
-            0%,100% { box-shadow: 0 0 20px rgba(52,211,153,0.1); }
-            50% { box-shadow: 0 0 70px rgba(52,211,153,0.3); }
-        }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+  }
 
-        .finished-text {
-            display: none;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #34d399;
-            margin-bottom: 1.5rem;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            animation: fadeIn 0.5s ease;
-        }
-        .show { display: block !important; }
+  .password-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 14px;
+    background: linear-gradient(135deg, #648cff, #4466dd);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .password-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(100,140,255,0.3);
+  }
 
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .error-msg {
+    color: #ff4444;
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 20px;
+  }
 
-        /* connection indicator */
-        .top-bar {
-            position: fixed; top: 1rem; right: 1rem;
-            display: flex; align-items: center; gap: 0.8rem;
-            z-index: 10;
-        }
-
-        .conn-indicator {
-            width: 12px; height: 12px; border-radius: 50%;
-            background: #ef4444; transition: background 0.3s;
-            box-shadow: 0 0 10px rgba(239,68,68,0.5);
-        }
-        .conn-indicator.connected { background: #34d399; box-shadow: 0 0 10px rgba(52,211,153,0.5); }
-
-        .client-count {
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.3);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* QR + waiting */
-        .waiting-panel {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2rem;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .qr-box {
-            background: #fff;
-            padding: 12px;
-            border-radius: 16px;
-            box-shadow: 0 0 30px rgba(255,255,255,0.1);
-        }
-
-        .qr-box canvas { display: block; }
-
-        .waiting-info {
-            text-align: left;
-        }
-
-        .waiting-info .label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: rgba(255,255,255,0.3);
-            margin-bottom: 0.3rem;
-        }
-
-        .waiting-info .url {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            color: rgba(255,255,255,0.7);
-            background: rgba(255,255,255,0.06);
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 0.8rem;
-            word-break: break-all;
-        }
-
-        .waiting-info .hint {
-            font-size: 0.8rem;
-            color: rgba(255,255,255,0.25);
-        }
-
-        @media (max-width: 800px) {
-            .time-card { min-width: 100px; padding: 1rem 1.2rem; }
-            .time-card .digits { font-size: 3.5rem; }
-            .separator { font-size: 3rem; }
-            .event-name { font-size: 1.3rem; }
-        }
-    </style>
+  .close-btn {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 28px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .close-btn:hover { color: #fff; }
+</style>
 </head>
-<body class="theme-cosmic">
-    <div class="top-bar">
-        <span class="client-count" id="clientCount"></span>
-        <div class="conn-indicator" id="connDot"></div>
-    </div>
+<body>
 
-    <div class="bg-particles" id="particles"></div>
+<div class="bg-grid"></div>
 
-    <div class="container">
-        <div class="event-name" id="eventName"></div>
-        <h1>Hackathon Timer</h1>
-        <div class="status-text" id="statusText">Oczekiwanie na start...</div>
+<div class="container">
+  <div class="title">HACKATHON TIMER</div>
+  <div class="subtitle">Wybierz tryb</div>
 
-        <div class="progress-container">
-            <svg class="progress-ring" width="200" height="200">
-                <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#a78bfa"/>
-                        <stop offset="50%" stop-color="#60a5fa"/>
-                        <stop offset="100%" stop-color="#34d399"/>
-                    </linearGradient>
-                </defs>
-                <circle class="progress-ring__bg" cx="100" cy="100" r="90"/>
-                <circle class="progress-ring__fill" id="progressRing" cx="100" cy="100" r="90"
-                    stroke-dasharray="565.49" stroke-dashoffset="0"/>
-            </svg>
-        </div>
+  <div class="cards">
+    <a class="card card-display" href="#" onclick="goDisplay(); return false;">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="card-title">DISPLAY</div>
+      <div class="card-desc">Ekran timera na projektor</div>
+    </a>
 
-        <div class="timer-display" id="timerDisplay">
-            <div class="time-block"><div class="time-card">
-                <div class="digits" id="hours">00</div>
-                <div class="label">Godziny</div>
-            </div></div>
-            <div class="separator blinking">:</div>
-            <div class="time-block"><div class="time-card">
-                <div class="digits" id="minutes">00</div>
-                <div class="label">Minuty</div>
-            </div></div>
-            <div class="separator blinking">:</div>
-            <div class="time-block"><div class="time-card">
-                <div class="digits" id="seconds">00</div>
-                <div class="label">Sekundy</div>
-            </div></div>
-        </div>
+    <a class="card card-panel" href="#" onclick="showPasswordPrompt(); return false;">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+      <div class="card-title">PANEL</div>
+      <div class="card-desc">Zdalne sterowanie timerem</div>
+    </a>
+  </div>
+</div>
 
-        <div class="finished-text" id="finishedText">Czas minął!</div>
+<!-- PASSWORD OVERLAY -->
+<div class="overlay" id="passwordOverlay">
+  <button class="close-btn" onclick="closePassword()">&times;</button>
+  <div class="password-box">
+    <h2>PANEL</h2>
+    <p>Podaj haslo aby uzyskac dostep</p>
+    <input type="password" class="password-input" id="passwordInput" placeholder="Haslo..." autofocus>
+    <button class="password-btn" onclick="checkPassword()">WEJDZ</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+</div>
 
-        <div class="current-time" id="currentTime"></div>
+<script>
+  const PANEL_PASSWORD = 'admin';
 
-        <div class="waiting-panel" id="waitingPanel">
-            <div class="qr-box">
-                <canvas id="qrCanvas"></canvas>
-            </div>
-            <div class="waiting-info">
-                <div class="label">Pilot zdalny</div>
-                <div class="url" id="remoteUrl"></div>
-                <div class="hint">Zeskanuj QR lub wpisz adres w przeglądarkę na telefonie</div>
-            </div>
-        </div>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-    // ============================================================
-    //  Minimal QR Code generator (no dependencies)
-    //  Supports alphanumeric up to ~150 chars, error correction L
-    // ============================================================
-    const QR = (() => {
-        // QR code generator - simplified for URLs
-        function generate(text, canvas, cellSize = 4) {
-            // Use a well-known compact QR encoding approach
-            const modules = createQR(text);
-            const size = modules.length;
-            const totalSize = size * cellSize;
-            canvas.width = totalSize;
-            canvas.height = totalSize;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, totalSize, totalSize);
-            ctx.fillStyle = '#000000';
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    if (modules[y][x]) {
-                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-                    }
-                }
-            }
-        }
-
-        function createQR(text) {
-            // Encode as byte mode QR, version chosen by length
-            const data = encodeUTF8(text);
-            const version = getMinVersion(data.length);
-            const size = version * 4 + 17;
-            const modules = Array.from({length: size}, () => Array(size).fill(null));
-            const reserved = Array.from({length: size}, () => Array(size).fill(false));
-
-            // Function patterns
-            placeFinderPattern(modules, reserved, 0, 0);
-            placeFinderPattern(modules, reserved, size - 7, 0);
-            placeFinderPattern(modules, reserved, 0, size - 7);
-
-            // Timing patterns
-            for (let i = 8; i < size - 8; i++) {
-                setModule(modules, reserved, 6, i, i % 2 === 0);
-                setModule(modules, reserved, i, 6, i % 2 === 0);
-            }
-
-            // Alignment patterns
-            const alignPos = getAlignmentPositions(version);
-            for (const r of alignPos) {
-                for (const c of alignPos) {
-                    if (reserved[r] && reserved[r][c]) continue;
-                    if ((r < 9 && c < 9) || (r < 9 && c > size - 9) || (r > size - 9 && c < 9)) continue;
-                    placeAlignmentPattern(modules, reserved, r, c);
-                }
-            }
-
-            // Format + version info reserved
-            reserveFormatArea(modules, reserved, size);
-            if (version >= 7) reserveVersionArea(modules, reserved, size);
-
-            // Dark module
-            setModule(modules, reserved, size - 8, 8, true);
-
-            // Data encoding
-            const ecInfo = getECInfo(version);
-            const bits = encodeData(data, version, ecInfo);
-            placeData(modules, reserved, bits, size);
-
-            // Best mask
-            let bestMask = 0, bestPenalty = Infinity;
-            for (let m = 0; m < 8; m++) {
-                const copy = modules.map(r => [...r]);
-                applyMask(copy, reserved, m, size);
-                placeFormatInfo(copy, m, size);
-                if (version >= 7) placeVersionInfo(copy, version, size);
-                const p = calcPenalty(copy, size);
-                if (p < bestPenalty) { bestPenalty = p; bestMask = m; }
-            }
-
-            applyMask(modules, reserved, bestMask, size);
-            placeFormatInfo(modules, bestMask, size);
-            if (version >= 7) placeVersionInfo(modules, version, size);
-
-            return modules;
-        }
-
-        function encodeUTF8(str) {
-            const bytes = [];
-            for (let i = 0; i < str.length; i++) {
-                const c = str.charCodeAt(i);
-                if (c < 128) bytes.push(c);
-                else if (c < 2048) { bytes.push(192 | (c >> 6)); bytes.push(128 | (c & 63)); }
-                else { bytes.push(224 | (c >> 12)); bytes.push(128 | ((c >> 6) & 63)); bytes.push(128 | (c & 63)); }
-            }
-            return bytes;
-        }
-
-        function getMinVersion(byteLen) {
-            // Byte mode capacity with EC level L
-            const caps = [0,17,32,53,78,106,134,154,192,230,271,321,367,425,458,520,586,644,718,792,858,929,1003,1091,1171,1273,1367,1465,1528,1628,1732,1840,1952,2068,2188,2303,2431,2563,2699,2809,2953];
-            for (let v = 1; v <= 40; v++) {
-                if (caps[v] >= byteLen) return v;
-            }
-            return 40;
-        }
-
-        function setModule(modules, reserved, r, c, val) {
-            modules[r][c] = val;
-            reserved[r][c] = true;
-        }
-
-        function placeFinderPattern(modules, reserved, row, col) {
-            for (let dr = -1; dr <= 7; dr++) {
-                for (let dc = -1; dc <= 7; dc++) {
-                    const r = row + dr, c = col + dc;
-                    if (r < 0 || c < 0 || r >= modules.length || c >= modules.length) continue;
-                    const inOuter = dr === 0 || dr === 6 || dc === 0 || dc === 6;
-                    const inInner = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
-                    const isBorder = dr === -1 || dr === 7 || dc === -1 || dc === 7;
-                    setModule(modules, reserved, r, c, !isBorder && (inOuter || inInner));
-                }
-            }
-        }
-
-        function placeAlignmentPattern(modules, reserved, row, col) {
-            for (let dr = -2; dr <= 2; dr++) {
-                for (let dc = -2; dc <= 2; dc++) {
-                    const val = Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0);
-                    setModule(modules, reserved, row + dr, col + dc, val);
-                }
-            }
-        }
-
-        function getAlignmentPositions(version) {
-            if (version === 1) return [];
-            const positions = [6];
-            const last = version * 4 + 10;
-            const count = Math.floor(version / 7) + 2;
-            const step = Math.ceil((last - 6) / (count - 1));
-            for (let i = 1; i < count; i++) {
-                positions.push(6 + i * step > last ? last : Math.min(6 + i * step, last));
-            }
-            positions[positions.length - 1] = last;
-            // recalculate evenly
-            if (count > 2) {
-                const s = Math.ceil((last - 6) / (count - 1) / 2) * 2;
-                const pos2 = [6];
-                for (let i = count - 2; i >= 1; i--) {
-                    pos2.unshift(last - (count - 1 - i) * s);
-                }
-                pos2.push(last);
-                return pos2;
-            }
-            return positions;
-        }
-
-        function reserveFormatArea(modules, reserved, size) {
-            for (let i = 0; i < 9; i++) {
-                if (i < size) reserved[8][i] = true;
-                if (i < size) reserved[i][8] = true;
-            }
-            for (let i = 0; i < 8; i++) {
-                reserved[8][size - 1 - i] = true;
-                reserved[size - 1 - i][8] = true;
-            }
-        }
-
-        function reserveVersionArea(modules, reserved, size) {
-            for (let i = 0; i < 6; i++) {
-                for (let j = 0; j < 3; j++) {
-                    reserved[i][size - 11 + j] = true;
-                    reserved[size - 11 + j][i] = true;
-                }
-            }
-        }
-
-        function getECInfo(version) {
-            // Simplified - returns total codewords and EC codewords per block for EC level L
-            // Format: [totalDataCodewords, ecCodewordsPerBlock, numBlocks]
-            const table = {
-                1:[19,7,1],2:[34,10,1],3:[55,15,1],4:[80,20,1],5:[108,26,1],
-                6:[136,18,2],7:[156,20,2],8:[194,24,2],9:[232,30,2],10:[274,18,4],
-                11:[324,20,4],12:[370,24,4],13:[428,26,4],14:[461,30,4],15:[523,22,6],
-                16:[589,24,6],17:[647,28,6],18:[721,30,6],19:[795,28,7],20:[861,28,8],
-                21:[932,28,8],22:[1006,28,9],23:[1094,30,9],24:[1174,30,10],25:[1276,26,12],
-                26:[1370,28,12],27:[1468,30,12],28:[1531,30,13],29:[1631,30,14],30:[1735,30,15],
-                31:[1843,30,16],32:[1955,30,17],33:[2071,30,18],34:[2191,30,19],35:[2306,30,20],
-                36:[2434,30,21],37:[2566,30,22],38:[2702,30,23],39:[2812,30,24],40:[2956,30,25],
-            };
-            return table[version] || table[1];
-        }
-
-        function encodeData(data, version, ecInfo) {
-            const [totalData] = ecInfo;
-            const bits = [];
-
-            // Mode indicator (byte = 0100)
-            bits.push(0,1,0,0);
-
-            // Character count (byte mode)
-            const ccBits = version <= 9 ? 8 : 16;
-            for (let i = ccBits - 1; i >= 0; i--) bits.push((data.length >> i) & 1);
-
-            // Data
-            for (const b of data) {
-                for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
-            }
-
-            // Terminator
-            const capacity = totalData * 8;
-            const termLen = Math.min(4, capacity - bits.length);
-            for (let i = 0; i < termLen; i++) bits.push(0);
-
-            // Pad to byte boundary
-            while (bits.length % 8 !== 0) bits.push(0);
-
-            // Pad codewords
-            const padWords = [0xEC, 0x11];
-            let padIdx = 0;
-            while (bits.length < capacity) {
-                const w = padWords[padIdx % 2];
-                for (let i = 7; i >= 0; i--) bits.push((w >> i) & 1);
-                padIdx++;
-            }
-
-            // Add EC (simplified Reed-Solomon)
-            const codewords = [];
-            for (let i = 0; i < bits.length; i += 8) {
-                let val = 0;
-                for (let j = 0; j < 8; j++) val = (val << 1) | (bits[i+j] || 0);
-                codewords.push(val);
-            }
-
-            const [, ecPerBlock, numBlocks] = ecInfo;
-            const dataPerBlock = Math.floor(totalData / numBlocks);
-            const remainder = totalData % numBlocks;
-
-            const dataBlocks = [];
-            const ecBlocks = [];
-            let offset = 0;
-
-            for (let b = 0; b < numBlocks; b++) {
-                const blockLen = dataPerBlock + (b >= numBlocks - remainder ? 1 : 0);
-                const block = codewords.slice(offset, offset + blockLen);
-                dataBlocks.push(block);
-                ecBlocks.push(computeEC(block, ecPerBlock));
-                offset += blockLen;
-            }
-
-            // Interleave
-            const result = [];
-            const maxDataLen = Math.max(...dataBlocks.map(b => b.length));
-            for (let i = 0; i < maxDataLen; i++) {
-                for (const block of dataBlocks) {
-                    if (i < block.length) {
-                        for (let j = 7; j >= 0; j--) result.push((block[i] >> j) & 1);
-                    }
-                }
-            }
-            for (let i = 0; i < ecPerBlock; i++) {
-                for (const block of ecBlocks) {
-                    if (i < block.length) {
-                        for (let j = 7; j >= 0; j--) result.push((block[i] >> j) & 1);
-                    }
-                }
-            }
-
-            // Remainder bits
-            const remainderBits = [0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
-            for (let i = 0; i < (remainderBits[version] || 0); i++) result.push(0);
-
-            return result;
-        }
-
-        // GF(256) arithmetic for Reed-Solomon
-        const GF_EXP = new Array(512);
-        const GF_LOG = new Array(256);
-        (function initGF() {
-            let x = 1;
-            for (let i = 0; i < 255; i++) {
-                GF_EXP[i] = x;
-                GF_LOG[x] = i;
-                x <<= 1;
-                if (x >= 256) x ^= 0x11d;
-            }
-            for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
-        })();
-
-        function gfMul(a, b) {
-            if (a === 0 || b === 0) return 0;
-            return GF_EXP[GF_LOG[a] + GF_LOG[b]];
-        }
-
-        function computeEC(data, ecLen) {
-            // Generator polynomial
-            let gen = [1];
-            for (let i = 0; i < ecLen; i++) {
-                const newGen = new Array(gen.length + 1).fill(0);
-                for (let j = 0; j < gen.length; j++) {
-                    newGen[j] ^= gen[j];
-                    newGen[j + 1] ^= gfMul(gen[j], GF_EXP[i]);
-                }
-                gen = newGen;
-            }
-
-            const msg = [...data, ...new Array(ecLen).fill(0)];
-            for (let i = 0; i < data.length; i++) {
-                const coef = msg[i];
-                if (coef !== 0) {
-                    for (let j = 1; j < gen.length; j++) {
-                        msg[i + j] ^= gfMul(gen[j], coef);
-                    }
-                }
-            }
-            return msg.slice(data.length);
-        }
-
-        function placeData(modules, reserved, bits, size) {
-            let bitIdx = 0;
-            let upward = true;
-            for (let right = size - 1; right >= 1; right -= 2) {
-                if (right === 6) right = 5; // skip timing column
-                const cols = [right, right - 1];
-                const rows = upward
-                    ? Array.from({length: size}, (_, i) => size - 1 - i)
-                    : Array.from({length: size}, (_, i) => i);
-                for (const row of rows) {
-                    for (const col of cols) {
-                        if (col < 0 || col >= size) continue;
-                        if (reserved[row][col]) continue;
-                        modules[row][col] = bitIdx < bits.length ? !!bits[bitIdx] : false;
-                        bitIdx++;
-                    }
-                }
-                upward = !upward;
-            }
-        }
-
-        function applyMask(modules, reserved, mask, size) {
-            for (let r = 0; r < size; r++) {
-                for (let c = 0; c < size; c++) {
-                    if (reserved[r][c]) continue;
-                    let invert = false;
-                    switch (mask) {
-                        case 0: invert = (r + c) % 2 === 0; break;
-                        case 1: invert = r % 2 === 0; break;
-                        case 2: invert = c % 3 === 0; break;
-                        case 3: invert = (r + c) % 3 === 0; break;
-                        case 4: invert = (Math.floor(r/2) + Math.floor(c/3)) % 2 === 0; break;
-                        case 5: invert = (r*c)%2 + (r*c)%3 === 0; break;
-                        case 6: invert = ((r*c)%2 + (r*c)%3) % 2 === 0; break;
-                        case 7: invert = ((r+c)%2 + (r*c)%3) % 2 === 0; break;
-                    }
-                    if (invert) modules[r][c] = !modules[r][c];
-                }
-            }
-        }
-
-        function placeFormatInfo(modules, mask, size) {
-            const FORMAT_BITS = [
-                0x77c4,0x72f3,0x7daa,0x789d,0x662f,0x6318,0x6c41,0x6976,
-                0x5412,0x5125,0x5e7c,0x5b4b,0x45f9,0x40ce,0x4f97,0x4aa0,
-            ];
-            // EC level L = 01, mask 0-7
-            const bits = FORMAT_BITS[mask]; // L level
-            for (let i = 0; i <= 5; i++) modules[8][i] = !!((bits >> (14 - i)) & 1);
-            modules[8][7] = !!((bits >> 8) & 1);
-            modules[8][8] = !!((bits >> 7) & 1);
-            modules[7][8] = !!((bits >> 6) & 1);
-            for (let i = 0; i <= 5; i++) modules[5 - i][8] = !!((bits >> (5 - i)) & 1);
-
-            for (let i = 0; i <= 7; i++) modules[size - 1 - i][8] = !!((bits >> (14 - i)) & 1);
-            for (let i = 0; i <= 6; i++) modules[8][size - 7 + i] = !!((bits >> (6 - i)) & 1);
-        }
-
-        function placeVersionInfo(modules, version, size) {
-            if (version < 7) return;
-            const VERSION_BITS = [
-                0,0,0,0,0,0,0,
-                0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,
-                0x10B78,0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,
-                0x191E1,0x1AFAB,0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,
-                0x228BA,0x2379F,0x24B0B,0x2542E,0x26A64,0x27541,0x28C69,
-            ];
-            const bits = VERSION_BITS[version];
-            for (let i = 0; i < 18; i++) {
-                const val = !!((bits >> i) & 1);
-                const r = Math.floor(i / 3);
-                const c = size - 11 + (i % 3);
-                modules[r][c] = val;
-                modules[c][r] = val;
-            }
-        }
-
-        function calcPenalty(modules, size) {
-            let penalty = 0;
-            // Rule 1: runs of same color
-            for (let r = 0; r < size; r++) {
-                let run = 1;
-                for (let c = 1; c < size; c++) {
-                    if (modules[r][c] === modules[r][c-1]) { run++; }
-                    else { if (run >= 5) penalty += run - 2; run = 1; }
-                }
-                if (run >= 5) penalty += run - 2;
-            }
-            for (let c = 0; c < size; c++) {
-                let run = 1;
-                for (let r = 1; r < size; r++) {
-                    if (modules[r][c] === modules[r-1][c]) { run++; }
-                    else { if (run >= 5) penalty += run - 2; run = 1; }
-                }
-                if (run >= 5) penalty += run - 2;
-            }
-            return penalty;
-        }
-
-        return { generate };
-    })();
-
-    // ============================================================
-    //  MAIN APP
-    // ============================================================
-    const socket = io({ query: { role: 'display' } });
-    const circumference = 2 * Math.PI * 90;
-
-    const el = {
-        hours: document.getElementById('hours'),
-        minutes: document.getElementById('minutes'),
-        seconds: document.getElementById('seconds'),
-        ring: document.getElementById('progressRing'),
-        display: document.getElementById('timerDisplay'),
-        eventName: document.getElementById('eventName'),
-        statusText: document.getElementById('statusText'),
-        finText: document.getElementById('finishedText'),
-        connDot: document.getElementById('connDot'),
-        waitingPanel: document.getElementById('waitingPanel'),
-        clientCount: document.getElementById('clientCount'),
-    };
-
-    // Remote URL + QR
-    const remoteUrl = location.origin + '/remote.html';
-    document.getElementById('remoteUrl').textContent = remoteUrl;
-
-    try {
-        QR.generate(remoteUrl, document.getElementById('qrCanvas'), 5);
-    } catch(e) {
-        console.warn('QR generation failed:', e);
-    }
-
-    // particles
-    (function() {
-        const c = document.getElementById('particles');
-        for (let i = 0; i < 35; i++) {
-            const p = document.createElement('div');
-            p.classList.add('particle');
-            const size = Math.random() * 6 + 2;
-            p.style.width = size + 'px'; p.style.height = size + 'px';
-            p.style.left = Math.random() * 100 + '%';
-            p.style.animationDuration = (Math.random() * 15 + 10) + 's';
-            p.style.animationDelay = (Math.random() * 10) + 's';
-            c.appendChild(p);
-        }
-    })();
-
-    function pad(n) { return String(n).padStart(2, '0'); }
-
-    // clock
-    setInterval(() => {
-        const now = new Date();
-        document.getElementById('currentTime').textContent =
-            pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-    }, 1000);
-
-    // alarm
-    function playAlarm() {
+  function goDisplay() {
+    const w = window.open('/display.html', '_blank');
+    if (w) {
+      // Try to go fullscreen after a short delay
+      setTimeout(() => {
         try {
-            const ctx = new AudioContext();
-            [880,1108,880,1108,880,0,880,1108,880,1108,880].forEach((f,i) => {
-                if (!f) return;
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.type = 'sine'; o.frequency.value = f;
-                g.gain.setValueAtTime(0.3, ctx.currentTime + i*0.2);
-                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.2 + 0.18);
-                o.connect(g); g.connect(ctx.destination);
-                o.start(ctx.currentTime + i*0.2);
-                o.stop(ctx.currentTime + i*0.2 + 0.2);
-            });
+          w.document.documentElement.requestFullscreen();
         } catch(e) {}
+      }, 500);
     }
+  }
 
-    let prevStatus = 'stopped';
+  function showPasswordPrompt() {
+    document.getElementById('passwordOverlay').classList.add('visible');
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('errorMsg').textContent = '';
+    document.getElementById('passwordInput').classList.remove('error');
+    setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+  }
 
-    // client count
-    socket.on('clients', (counts) => {
-        el.clientCount.textContent = `${counts.remotes} pilot${counts.remotes === 1 ? '' : 'ów'} | ${counts.displays} ekran${counts.displays === 1 ? '' : 'ów'}`;
-    });
+  function closePassword() {
+    document.getElementById('passwordOverlay').classList.remove('visible');
+  }
 
-    socket.on('state', (state) => {
-        // theme
-        document.body.className = 'theme-' + state.theme;
+  function checkPassword() {
+    const input = document.getElementById('passwordInput');
+    const error = document.getElementById('errorMsg');
 
-        // event name
-        el.eventName.textContent = state.eventName || '';
+    if (input.value === PANEL_PASSWORD) {
+      window.location.href = '/remote.html';
+    } else {
+      input.classList.add('error');
+      error.textContent = 'Bledne haslo';
+      setTimeout(() => input.classList.remove('error'), 400);
+      input.value = '';
+      input.focus();
+    }
+  }
 
-        // digits
-        const sec = Math.max(0, state.remainingSeconds);
-        el.hours.textContent   = pad(Math.floor(sec / 3600));
-        el.minutes.textContent = pad(Math.floor((sec % 3600) / 60));
-        el.seconds.textContent = pad(sec % 60);
+  // Enter key support
+  document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkPassword();
+    if (e.key === 'Escape') closePassword();
+  });
 
-        // ring
-        const progress = state.totalSeconds > 0 ? (state.totalSeconds - sec) / state.totalSeconds : 0;
-        el.ring.style.strokeDashoffset = circumference * (1 - progress);
-
-        // blink separators only when running
-        document.querySelectorAll('.separator').forEach(s => {
-            s.classList.toggle('blinking', state.status === 'running');
-        });
-
-        // urgency
-        el.display.classList.remove('urgent', 'warning', 'finished');
-        if (state.status === 'running') {
-            if (sec <= 60) el.display.classList.add('urgent');
-            else if (sec <= 300) el.display.classList.add('warning');
-        }
-
-        // finished
-        if (state.status === 'finished') {
-            el.display.classList.add('finished');
-            el.finText.classList.add('show');
-            el.statusText.textContent = 'Czas dobiegł końca!';
-            document.title = 'CZAS MINĄŁ!';
-            if (prevStatus !== 'finished') playAlarm();
-        } else {
-            el.finText.classList.remove('show');
-        }
-
-        // status text
-        if (state.status === 'running') {
-            if (state.mode === 'target') {
-                el.statusText.textContent = `Odliczanie do ${pad(state.targetInput.h)}:${pad(state.targetInput.m)}`;
-            } else {
-                el.statusText.textContent = 'Odliczanie w toku...';
-            }
-            document.title = `${pad(Math.floor(sec/3600))}:${pad(Math.floor((sec%3600)/60))}:${pad(sec%60)} - Timer`;
-        } else if (state.status === 'paused') {
-            el.statusText.textContent = 'PAUZA';
-        } else if (state.status === 'stopped') {
-            el.statusText.textContent = 'Oczekiwanie na start...';
-            document.title = 'Hackathon Timer';
-        }
-
-        // hide QR/waiting when running
-        el.waitingPanel.style.display = (state.status === 'stopped') ? 'flex' : 'none';
-
-        prevStatus = state.status;
-    });
-
-    socket.on('connect', () => el.connDot.classList.add('connected'));
-    socket.on('disconnect', () => el.connDot.classList.remove('connected'));
-
-    // auto fullscreen on click
-    document.addEventListener('click', () => {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
-    });
-    </script>
+  // Close overlay on backdrop click
+  document.getElementById('passwordOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('passwordOverlay')) closePassword();
+  });
+</script>
 </body>
 </html>

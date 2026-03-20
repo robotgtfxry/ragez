@@ -122,6 +122,144 @@
       0 0 100px var(--glow-color2, currentColor);
   }
 
+  /* === EXTRA GLOW STYLES === */
+  .glow-intense .timer-display {
+    text-shadow:
+      0 0 15px currentColor,
+      0 0 40px currentColor,
+      0 0 80px currentColor,
+      0 0 150px currentColor,
+      0 0 250px currentColor;
+  }
+  .glow-subtle .timer-display {
+    text-shadow:
+      0 0 6px rgba(255,255,255,0.15),
+      0 0 12px rgba(255,255,255,0.08);
+  }
+  .glow-fire .timer-display {
+    text-shadow:
+      0 0 10px #ff4400,
+      0 0 30px #ff6600,
+      0 0 60px #ff8800,
+      0 0 100px #ffaa00;
+    animation: firePulse 1.5s ease-in-out infinite;
+  }
+  @keyframes firePulse {
+    0%, 100% {
+      text-shadow:
+        0 0 10px #ff4400,
+        0 0 25px #ff6600,
+        0 0 50px #ff8800;
+    }
+    50% {
+      text-shadow:
+        0 0 15px #ff4400,
+        0 0 40px #ff6600,
+        0 0 80px #ff8800,
+        0 0 130px #ffaa00;
+    }
+  }
+  .glow-ice .timer-display {
+    text-shadow:
+      0 0 10px #00ccff,
+      0 0 30px #0088ff,
+      0 0 60px #0055ff,
+      0 0 100px #0033cc;
+  }
+  .glow-rainbow .timer-display {
+    animation: rainbowGlow 4s linear infinite;
+  }
+  @keyframes rainbowGlow {
+    0%   { text-shadow: 0 0 20px #ff0000, 0 0 60px #ff0000, 0 0 120px #ff0000; }
+    16%  { text-shadow: 0 0 20px #ff8800, 0 0 60px #ff8800, 0 0 120px #ff8800; }
+    33%  { text-shadow: 0 0 20px #ffff00, 0 0 60px #ffff00, 0 0 120px #ffff00; }
+    50%  { text-shadow: 0 0 20px #00ff00, 0 0 60px #00ff00, 0 0 120px #00ff00; }
+    66%  { text-shadow: 0 0 20px #0088ff, 0 0 60px #0088ff, 0 0 120px #0088ff; }
+    83%  { text-shadow: 0 0 20px #8800ff, 0 0 60px #8800ff, 0 0 120px #8800ff; }
+    100% { text-shadow: 0 0 20px #ff0000, 0 0 60px #ff0000, 0 0 120px #ff0000; }
+  }
+  .glow-matrix .timer-display {
+    text-shadow:
+      0 0 8px #00ff41,
+      0 0 25px #00ff41,
+      0 0 50px #008f11,
+      0 0 100px #003b00;
+  }
+  .glow-electric .timer-display {
+    animation: electricFlicker 0.3s ease-in-out infinite alternate;
+  }
+  @keyframes electricFlicker {
+    0% {
+      text-shadow:
+        0 0 10px currentColor,
+        0 0 30px currentColor,
+        0 0 60px currentColor;
+    }
+    25% {
+      text-shadow:
+        0 0 5px currentColor,
+        0 0 15px currentColor;
+    }
+    50% {
+      text-shadow:
+        0 0 15px currentColor,
+        0 0 40px currentColor,
+        0 0 80px currentColor,
+        0 0 140px currentColor;
+    }
+    75% {
+      text-shadow:
+        0 0 8px currentColor,
+        0 0 20px currentColor;
+    }
+    100% {
+      text-shadow:
+        0 0 12px currentColor,
+        0 0 35px currentColor,
+        0 0 70px currentColor;
+    }
+  }
+  .glow-retro .timer-display {
+    text-shadow:
+      2px 2px 0px #ff00ff,
+      -2px -2px 0px #00ffff,
+      0 0 20px #ff00ff,
+      0 0 40px #00ffff;
+  }
+  .glow-warm .timer-display {
+    text-shadow:
+      0 0 10px #ffaa00,
+      0 0 30px #ff8800,
+      0 0 50px #ff6600;
+  }
+  .glow-cold .timer-display {
+    text-shadow:
+      0 0 10px #88ccff,
+      0 0 30px #4488ff,
+      0 0 60px #2244cc;
+  }
+  .glow-breathe .timer-display {
+    animation: breatheGlow 4s ease-in-out infinite;
+  }
+  @keyframes breatheGlow {
+    0%, 100% {
+      text-shadow: 0 0 5px currentColor;
+      opacity: 0.7;
+    }
+    50% {
+      text-shadow:
+        0 0 15px currentColor,
+        0 0 40px currentColor,
+        0 0 80px currentColor;
+      opacity: 1;
+    }
+  }
+  .glow-shadow .timer-display {
+    text-shadow:
+      4px 4px 8px rgba(0,0,0,0.8),
+      0 0 10px rgba(255,255,255,0.1);
+  }
+
   .timer-label {
     font-family: 'Rajdhani', sans-serif;
     font-size: clamp(16px, 3vw, 36px);
@@ -338,6 +476,57 @@
     margin-top: 5px;
   }
 
+  /* === RING VARIANTS === */
+  .ring-variant-no-ticks .ring-ticks { display: none; }
+
+  .ring-variant-major-only .ring-ticks line:not(.major) { display: none; }
+
+  .ring-variant-dots .ring-ticks line {
+    stroke-width: 0;
+  }
+  .ring-variant-dots .ring-ticks circle.dot-tick {
+    fill: rgba(255,255,255,0.15);
+  }
+  .ring-variant-dots .ring-ticks circle.dot-tick.major {
+    fill: rgba(255,255,255,0.4);
+    r: 3;
+  }
+
+  .ring-variant-thin .ring-progress { stroke-width: 6; }
+  .ring-variant-thin .ring-bg { stroke-width: 4; }
+
+  .ring-variant-thick .ring-progress { stroke-width: 26; }
+  .ring-variant-thick .ring-bg { stroke-width: 24; }
+
+  .ring-variant-dashed .ring-progress {
+    stroke-dasharray: 20 8;
+    stroke-linecap: butt;
+  }
+  .ring-variant-dashed .ring-bg {
+    stroke-dasharray: 20 8;
+  }
+
+  .ring-variant-double .ring-bg-outer {
+    display: block;
+  }
+  .ring-variant-double .ring-progress-outer {
+    display: block;
+  }
+
+  .ring-variant-minimal-arc .ring-bg { stroke-opacity: 0; }
+  .ring-variant-minimal-arc .ring-ticks { display: none; }
+  .ring-variant-minimal-arc .ring-progress { stroke-width: 8; stroke-linecap: round; }
+
+  .ring-variant-glow-ring .ring-progress {
+    stroke-width: 18;
+    stroke-linecap: round;
+  }
+  .ring-variant-glow-ring .ring-bg {
+    stroke: rgba(255,255,255,0.03);
+    stroke-width: 18;
+  }
+  .ring-variant-glow-ring .ring-ticks { display: none; }
+
   /* === CLASSIC STYLE === */
   .classic-cards {
     display: flex;
@@ -538,8 +727,13 @@
           </linearGradient>
         </defs>
         <circle class="ring-bg" cx="200" cy="200" r="175" />
+        <circle class="ring-bg-outer" cx="200" cy="200" r="192" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="6" style="display:none" />
         <circle class="ring-progress" id="ringProgress" cx="200" cy="200" r="175"
           stroke-dasharray="1099.56" stroke-dashoffset="0" />
+        <circle class="ring-progress-outer" id="ringProgressOuter" cx="200" cy="200" r="192"
+          fill="none" stroke="url(#ringGrad)" stroke-width="6" stroke-linecap="round"
+          stroke-dasharray="1206.37" stroke-dashoffset="0" opacity="0.4" style="display:none"
+          filter="drop-shadow(0 0 6px rgba(0,255,136,0.3))" />
         <!-- tick marks -->
         <g class="ring-ticks" id="ringTicks"></g>
       </svg>
@@ -609,10 +803,10 @@
   <div class="timer-bar" id="timerBar" style="width:100%"></div>
 </div>
 
-<div class="warning-label" id="warningLabel">⚠ CZAS SIĘ KOŃCZY ⚠</div>
+<div class="warning-label" id="warningLabel">CZAS SIE KONCZY</div>
 
 <div class="finish-overlay" id="finishOverlay">
-  <div class="finish-message" id="finishMessage">⏰ CZAS MINĄŁ!</div>
+  <div class="finish-message" id="finishMessage">CZAS MINAL!</div>
   <img class="finish-image" id="finishImage" src="" alt="">
 </div>
 
@@ -684,8 +878,7 @@
     playBeep(1200, 0.05, 'sine', 0.1);
   }
 
-  // Create particles
-  // Generate ring tick marks
+  // Generate ring tick marks (lines + dots for variant switching)
   (function() {
     const ticks = document.getElementById('ringTicks');
     for (let i = 0; i < 60; i++) {
@@ -697,15 +890,65 @@
       const y1 = 200 + r1 * Math.sin(angle);
       const x2 = 200 + r2 * Math.cos(angle);
       const y2 = 200 + r2 * Math.sin(angle);
+      // Line tick
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', x1); line.setAttribute('y1', y1);
       line.setAttribute('x2', x2); line.setAttribute('y2', y2);
       if (isMajor) line.classList.add('major');
       ticks.appendChild(line);
+      // Dot tick (for dots variant)
+      const dotR = 164;
+      const cx = 200 + dotR * Math.cos(angle);
+      const cy = 200 + dotR * Math.sin(angle);
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
+      dot.setAttribute('r', isMajor ? 3 : 1.5);
+      dot.classList.add('dot-tick');
+      if (isMajor) dot.classList.add('major');
+      dot.style.display = 'none';
+      ticks.appendChild(dot);
     }
   })();
 
   const RING_CIRCUMFERENCE = 2 * Math.PI * 175; // ~1099.56
+  const RING_OUTER_CIRCUMFERENCE = 2 * Math.PI * 192;
+
+  function applyRingVariant(variant) {
+    const wrapper = document.getElementById('styleRing');
+    // Remove all variant classes
+    wrapper.className = wrapper.className.replace(/ring-variant-\S+/g, '').trim();
+    if (variant && variant !== 'classic') {
+      wrapper.classList.add('ring-variant-' + variant);
+    }
+    // Toggle dot visibility
+    const dots = document.querySelectorAll('.dot-tick');
+    const lines = document.querySelectorAll('#ringTicks line');
+    if (variant === 'dots') {
+      dots.forEach(d => d.style.display = '');
+      lines.forEach(l => l.style.display = 'none');
+    } else {
+      dots.forEach(d => d.style.display = 'none');
+      lines.forEach(l => l.style.display = '');
+    }
+    // Double ring
+    const outerBg = document.querySelector('.ring-bg-outer');
+    const outerProgress = document.querySelector('.ring-progress-outer');
+    if (variant === 'double') {
+      outerBg.style.display = '';
+      outerProgress.style.display = '';
+    } else {
+      outerBg.style.display = 'none';
+      outerProgress.style.display = 'none';
+    }
+    // Dashed variant - need to reset dasharray for progress
+    const progress = document.getElementById('ringProgress');
+    if (variant === 'dashed') {
+      // Dashed handled by CSS, but we need to not use the regular dasharray logic
+      progress.setAttribute('stroke-dasharray', '20 8');
+    } else {
+      progress.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE);
+    }
+  }
 
   function switchTimerStyle(style) {
     ['styleCyber','styleRing','styleClassic','styleMinimal','styleFlip'].forEach(id => {
@@ -726,11 +969,30 @@
     // Ring
     document.getElementById('ringTime').textContent = timeStr;
     document.getElementById('ringTime').style.color = color;
-    const ringOffset = RING_CIRCUMFERENCE * (1 - progress);
-    document.getElementById('ringProgress').style.strokeDashoffset = ringOffset;
+    const currentVariant = (window._currentState && window._currentState.ringVariant) || 'classic';
+    if (currentVariant === 'dashed') {
+      // For dashed, manipulate visibility via stroke-dashoffset on a different scale
+      const totalSegments = Math.ceil(RING_CIRCUMFERENCE / 28); // 28 = 20+8
+      const activeSegments = Math.round(totalSegments * progress);
+      const dashLen = activeSegments * 28;
+      document.getElementById('ringProgress').style.strokeDasharray = `20 8`;
+      document.getElementById('ringProgress').style.strokeDashoffset = -(RING_CIRCUMFERENCE - dashLen);
+    } else {
+      const ringOffset = RING_CIRCUMFERENCE * (1 - progress);
+      document.getElementById('ringProgress').style.strokeDashoffset = ringOffset;
+    }
     document.getElementById('ringGradStop1').setAttribute('stop-color', color);
     document.getElementById('ringGradStop2').setAttribute('stop-color', color);
-    document.getElementById('ringProgress').style.filter = `drop-shadow(0 0 12px ${color})`;
+    if (currentVariant === 'glow-ring') {
+      document.getElementById('ringProgress').style.filter = `drop-shadow(0 0 15px ${color}) drop-shadow(0 0 35px ${color}) drop-shadow(0 0 60px ${color})`;
+    } else {
+      document.getElementById('ringProgress').style.filter = `drop-shadow(0 0 12px ${color})`;
+    }
+    // Double ring outer
+    if (currentVariant === 'double') {
+      const outerOffset = RING_OUTER_CIRCUMFERENCE * (1 - progress);
+      document.getElementById('ringProgressOuter').style.strokeDashoffset = outerOffset;
+    }
 
     // Classic
     document.getElementById('classicHours').textContent = pad(h);
@@ -840,6 +1102,9 @@
     // Timer display style
     switchTimerStyle(st.timerDisplayStyle || 'cyber');
 
+    // Ring variant
+    applyRingVariant(st.ringVariant || 'classic');
+
     // Overlay image
     const oi = document.getElementById('overlayImage');
     if (st.overlayImage) {
@@ -857,7 +1122,7 @@
       if (!finishPlayed) {
         // Phase 1: show message on black screen
         finishPhase = 1;
-        finishMsg.textContent = st.finishMessage || '⏰ CZAS MINĄŁ!';
+        finishMsg.textContent = st.finishMessage || 'CZAS MINAL!';
         finishMsg.classList.remove('hidden');
         finishImg.classList.remove('active');
 
@@ -934,7 +1199,7 @@
       color = st.timerDangerColor || '#ff0040';
       display.className = 'timer-display danger-flash';
       warning.style.display = 'block';
-      warning.textContent = st.dangerMessage || '🚨 OSTATNIE SEKUNDY! 🚨';
+      warning.textContent = st.dangerMessage || 'OSTATNIE SEKUNDY!';
       warning.style.color = color;
       warning.style.borderColor = color;
       warning.style.background = 'rgba(255,0,0,0.15)';
@@ -949,7 +1214,7 @@
       color = st.timerWarningColor || '#ff6b35';
       display.className = 'timer-display warning-pulse';
       warning.style.display = 'block';
-      warning.textContent = st.warningMessage || '⚠ CZAS SIĘ KOŃCZY ⚠';
+      warning.textContent = st.warningMessage || 'CZAS SIE KONCZY';
       warning.style.color = color;
       warning.style.borderColor = color;
       warning.style.background = 'rgba(255,107,53,0.1)';
@@ -995,6 +1260,7 @@
   let lastAnnouncementId = null;
   socket.on('state-sync', (state) => {
     currentState = state;
+    window._currentState = state;
     updateDisplay();
 
     if (state.announcement && state.announcement.id !== lastAnnouncementId) {
@@ -1009,10 +1275,23 @@
   // Update every 100ms for smooth countdown
   setInterval(updateDisplay, 100);
 
-  // Init audio on first interaction
+  // Init audio on first interaction + fullscreen on click
   document.addEventListener('click', () => {
     getAudioCtx();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
   }, { once: true });
+
+  // Show fullscreen hint
+  (function() {
+    const hint = document.createElement('div');
+    hint.textContent = 'Kliknij aby wejsc na pelny ekran';
+    hint.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:rgba(255,255,255,0.6);padding:10px 24px;border-radius:20px;font-family:Rajdhani,sans-serif;font-size:14px;letter-spacing:0.1em;z-index:9999;pointer-events:none;transition:opacity 1s;';
+    document.body.appendChild(hint);
+    setTimeout(() => { hint.style.opacity = '0'; }, 3000);
+    setTimeout(() => { hint.remove(); }, 4000);
+  })();
 </script>
 </body>
 </html>

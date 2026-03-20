@@ -59,14 +59,58 @@
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
   /* === PREVIEW === */
-  .preview-container {
+  .preview-wrapper {
     margin: 12px;
+  }
+  .preview-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
     border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .preview-toggle:hover {
+    background: rgba(255,255,255,0.05);
+  }
+  .preview-toggle .arrow {
+    transition: transform 0.3s ease;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .preview-toggle.collapsed .arrow {
+    transform: rotate(-90deg);
+  }
+  .preview-container {
+    border-radius: 0 0 12px 12px;
     overflow: hidden;
     border: 2px solid var(--card-border);
+    border-top: none;
     position: relative;
     aspect-ratio: 16/9;
     background: #000;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    max-height: 500px;
+    opacity: 1;
+  }
+  .preview-container.hidden {
+    max-height: 0;
+    opacity: 0;
+    border: none;
+    pointer-events: none;
+  }
+  .preview-toggle:not(.collapsed) {
+    border-radius: 12px 12px 0 0;
+    border-bottom: none;
   }
   .preview-container iframe {
     width: 100%;
@@ -447,7 +491,7 @@
 <body>
 
 <div class="header">
-  <h1>🎮 PILOT</h1>
+  <h1>PILOT</h1>
   <div style="display:flex;align-items:center;gap:8px;">
     <span style="font-size:12px;color:var(--text-muted)" id="connectionStatus">Połączony</span>
     <div class="status-dot" id="statusDot"></div>
@@ -455,9 +499,15 @@
 </div>
 
 <!-- LIVE PREVIEW -->
-<div class="preview-container">
-  <iframe id="previewFrame" src="/display.html"></iframe>
-  <span class="preview-label">📺 PODGLĄD NA ŻYWO</span>
+<div class="preview-wrapper">
+  <div class="preview-toggle" onclick="togglePreview(this)">
+    <span>PODGLAD NA ZYWO</span>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="preview-container" id="previewContainer">
+    <iframe id="previewFrame" src="/display.html"></iframe>
+    <span class="preview-label">LIVE</span>
+  </div>
 </div>
 
 <!-- TIMER CONTROLS -->
@@ -533,7 +583,7 @@
 <!-- TIMER STYLE -->
 <div class="section">
   <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon">🎨</span> Styl timera i ostrzeżenia
+    <span class="icon"></span> Styl timera i ostrzezenia
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
@@ -579,7 +629,7 @@
 
     <div class="divider"></div>
 
-    <label>Świecenie timera</label>
+    <label>Opcje stylu</label>
     <div class="glow-switcher">
       <button class="btn btn-outline btn-icon" onclick="cycleGlow(-1)">◀</button>
       <span class="glow-current" id="glowCurrentName">Neon</span>
@@ -595,6 +645,16 @@
           <label>Glow kolor 2</label>
           <input type="color" id="glowColor2" value="#0088ff" onchange="updateGlowColors()">
         </div>
+      </div>
+    </div>
+
+    <div id="ringVariantSection" style="display:none;">
+      <div class="divider"></div>
+      <label>Wariant kolka</label>
+      <div class="glow-switcher">
+        <button class="btn btn-outline btn-icon" onclick="cycleRingVariant(-1)">&#9664;</button>
+        <span class="glow-current" id="ringVariantName">Klasyczny</span>
+        <button class="btn btn-outline btn-icon" onclick="cycleRingVariant(1)">&#9654;</button>
       </div>
     </div>
 
@@ -618,25 +678,25 @@
     <div class="divider"></div>
 
     <label>Komunikat ostrzeżenia</label>
-    <input type="text" id="warningMessage" value="⚠ CZAS SIĘ KOŃCZY ⚠" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <input type="text" id="warningMessage" value="CZAS SIE KONCZY" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
     <div class="info-text">Tekst wyświetlany gdy zbliża się koniec</div>
 
     <label>Komunikat zagrożenia</label>
-    <input type="text" id="dangerMessage" value="🚨 OSTATNIE SEKUNDY! 🚨" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <input type="text" id="dangerMessage" value="OSTATNIE SEKUNDY!" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
     <div class="info-text">Tekst wyświetlany w ostatnich sekundach</div>
 
     <label>Komunikat pauzy</label>
-    <input type="text" id="pauseMessage" value="⏸ PAUZA" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <input type="text" id="pauseMessage" value="PAUZA" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
     <div class="info-text">Tekst wyświetlany podczas pauzy</div>
 
     <div class="divider"></div>
 
     <label>Komunikat końcowy</label>
-    <input type="text" id="finishMessage" value="⏰ CZAS MINĄŁ!" onchange="updateFinishMessage()">
+    <input type="text" id="finishMessage" value="CZAS MINAL!" onchange="updateFinishMessage()">
 
     <label>Obrazek końcowy</label>
     <div class="file-upload" onclick="document.getElementById('finishImageUpload').click()">
-      📷 Kliknij aby dodać obrazek<br><small>Wyświetli się gdy czas minie</small>
+      Kliknij aby dodac obrazek<br><small>Wyswietli sie gdy czas minie</small>
       <input type="file" id="finishImageUpload" accept="image/*" onchange="uploadFinishImage(this)">
     </div>
     <div id="finishImagePreview" style="margin-top:8px;display:none">
@@ -653,7 +713,7 @@
 <!-- ANNOUNCEMENTS -->
 <div class="section">
   <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon">📢</span> Komunikaty
+    <span class="icon"></span> Komunikaty
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
@@ -685,17 +745,17 @@
     </select>
 
     <div style="margin-top:12px" class="btn-group">
-      <button class="btn btn-accent btn-full" onclick="sendAnnouncement()">📢 WYŚLIJ</button>
+      <button class="btn btn-accent btn-full" onclick="sendAnnouncement()">WYSLIJ</button>
       <button class="btn btn-outline" onclick="clearAnnouncement()">✕ USUŃ</button>
     </div>
 
     <div class="divider"></div>
     <label>Szybkie komunikaty</label>
     <div class="quick-times">
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('🔥 PREZENTACJE ZA 5 MINUT!')">Prezentacje</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('☕ PRZERWA!')">Przerwa</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('📝 ODDAJCIE PROJEKTY!')">Oddaj projekt</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('🎉 BRAWO!')">Brawo</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('PREZENTACJE ZA 5 MINUT!')">Prezentacje</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('PRZERWA!')">Przerwa</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('ODDAJCIE PROJEKTY!')">Oddaj projekt</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('BRAWO!')">Brawo</button>
     </div>
   </div>
 </div>
@@ -703,7 +763,7 @@
 <!-- BACKGROUNDS -->
 <div class="section">
   <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon">🖼</span> Tło ekranu
+    <span class="icon"></span> Tlo ekranu
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
@@ -726,7 +786,7 @@
     <div class="divider"></div>
     <label>Własne tło ze zdjęcia</label>
     <input type="file" accept="image/*" id="bgImageInput" onchange="uploadBgImage(this)" style="display:none">
-    <button class="btn btn-accent btn-full" onclick="document.getElementById('bgImageInput').click()">📷 Wybierz zdjęcie</button>
+    <button class="btn btn-accent btn-full" onclick="document.getElementById('bgImageInput').click()">Wybierz zdjecie</button>
     <div id="bgImagePreview" style="display:none;margin-top:8px;text-align:center;">
       <img id="bgImagePrev" style="max-width:100%;max-height:120px;border-radius:8px;border:2px solid var(--primary);">
       <button class="btn btn-danger btn-full" style="margin-top:6px" onclick="removeBgImage()">Usuń zdjęcie tła</button>
@@ -737,12 +797,12 @@
 <!-- OVERLAY IMAGE -->
 <div class="section">
   <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon">🏷</span> Obrazek / logo na ekranie
+    <span class="icon"></span> Obrazek / logo na ekranie
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
     <div class="file-upload" onclick="document.getElementById('overlayUpload').click()">
-      📷 Kliknij aby dodać logo/obrazek<br><small>Pojawi się na ekranie projektora</small>
+      Kliknij aby dodac logo/obrazek<br><small>Pojawi sie na ekranie projektora</small>
       <input type="file" id="overlayUpload" accept="image/*" onchange="uploadOverlay(this)">
     </div>
 
@@ -768,7 +828,7 @@
 <!-- SOUNDS -->
 <div class="section">
   <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon">🔊</span> Dźwięki
+    <span class="icon"></span> Dzwieki
     <span class="arrow">▼</span>
   </div>
   <div class="section-body collapsed">
@@ -872,12 +932,69 @@
 
   // === TIMER DISPLAY STYLES ===
   const displayStyles = [
-    { id: 'cyber', name: 'Cyber', icon: '💠' },
-    { id: 'ring', name: 'Kołowy', icon: '⭕' },
-    { id: 'classic', name: 'Klasyk', icon: '🏛' },
-    { id: 'minimal', name: 'Minimal', icon: '━' },
-    { id: 'flip', name: 'Retro', icon: '🔢' },
+    { id: 'cyber', name: 'Cyber', icon: 'C' },
+    { id: 'ring', name: 'Kolowy', icon: 'O' },
+    { id: 'classic', name: 'Klasyk', icon: 'K' },
+    { id: 'minimal', name: 'Minimal', icon: '--' },
+    { id: 'flip', name: 'Retro', icon: '#' },
   ];
+
+  // Each display style has its own set of glow options
+  const styleGlowOptions = {
+    cyber: [
+      { id: 'none', name: 'Brak' },
+      { id: 'soft', name: 'Miekki' },
+      { id: 'neon', name: 'Neon' },
+      { id: 'intense', name: 'Intensywny' },
+      { id: 'pulse', name: 'Pulsujacy' },
+      { id: 'electric', name: 'Elektryczny' },
+      { id: 'matrix', name: 'Matrix' },
+      { id: 'rainbow', name: 'Tecza' },
+      { id: 'custom', name: 'Wlasny kolor' },
+    ],
+    ring: [
+      { id: 'none', name: 'Brak' },
+      { id: 'soft', name: 'Miekki' },
+      { id: 'neon', name: 'Neon' },
+      { id: 'pulse', name: 'Pulsujacy' },
+      { id: 'breathe', name: 'Oddech' },
+      { id: 'fire', name: 'Ogien' },
+      { id: 'ice', name: 'Lod' },
+      { id: 'rainbow', name: 'Tecza' },
+      { id: 'custom', name: 'Wlasny kolor' },
+    ],
+    classic: [
+      { id: 'none', name: 'Brak' },
+      { id: 'subtle', name: 'Delikatny' },
+      { id: 'soft', name: 'Miekki' },
+      { id: 'warm', name: 'Cieply' },
+      { id: 'cold', name: 'Zimny' },
+      { id: 'shadow', name: 'Cien' },
+      { id: 'custom', name: 'Wlasny kolor' },
+    ],
+    minimal: [
+      { id: 'none', name: 'Brak' },
+      { id: 'subtle', name: 'Delikatny' },
+      { id: 'soft', name: 'Miekki' },
+      { id: 'shadow', name: 'Cien' },
+      { id: 'breathe', name: 'Oddech' },
+    ],
+    flip: [
+      { id: 'none', name: 'Brak' },
+      { id: 'soft', name: 'Miekki' },
+      { id: 'neon', name: 'Neon' },
+      { id: 'retro', name: 'Retro' },
+      { id: 'warm', name: 'Cieply' },
+      { id: 'electric', name: 'Elektryczny' },
+      { id: 'fire', name: 'Ogien' },
+      { id: 'custom', name: 'Wlasny kolor' },
+    ],
+  };
+
+  function getCurrentGlowStyles() {
+    const style = currentState.timerDisplayStyle || 'cyber';
+    return styleGlowOptions[style] || styleGlowOptions.cyber;
+  }
 
   function renderDisplayStyleGrid() {
     const grid = document.getElementById('displayStyleGrid');
@@ -888,33 +1005,38 @@
       div.innerHTML = `<span class="ds-icon">${ds.icon}</span><span class="ds-name">${ds.name}</span>`;
       div.onclick = () => {
         socket.emit('set-timer-display-style', ds.id);
+        currentState.timerDisplayStyle = ds.id;
         document.querySelectorAll('.ds-option').forEach(el => el.classList.remove('active'));
         div.classList.add('active');
+        // Reset glow to first available option for new style if current glow is not available
+        const available = getCurrentGlowStyles();
+        const currentGlow = currentState.timerGlowStyle || 'neon';
+        if (!available.find(g => g.id === currentGlow)) {
+          const first = available[0];
+          socket.emit('set-timer-glow', first.id);
+          currentState.timerGlowStyle = first.id;
+        }
+        syncGlowUI();
       };
       grid.appendChild(div);
     });
   }
 
   // === GLOW STYLES ===
-  const glowStyles = [
-    { id: 'none', name: 'Brak' },
-    { id: 'soft', name: 'Miękki' },
-    { id: 'neon', name: 'Neon' },
-    { id: 'pulse', name: 'Pulsujący' },
-    { id: 'custom', name: 'Własny kolor' },
-  ];
-
   function getGlowIndex() {
+    const glowStyles = getCurrentGlowStyles();
     const active = currentState.timerGlowStyle || 'neon';
     const idx = glowStyles.findIndex(g => g.id === active);
-    return idx >= 0 ? idx : 2;
+    return idx >= 0 ? idx : 0;
   }
 
   function cycleGlow(dir) {
+    const glowStyles = getCurrentGlowStyles();
     let idx = getGlowIndex() + dir;
     if (idx < 0) idx = glowStyles.length - 1;
     if (idx >= glowStyles.length) idx = 0;
     const g = glowStyles[idx];
+    currentState.timerGlowStyle = g.id;
     if (g.id === 'custom') {
       socket.emit('set-timer-glow', {
         style: 'custom',
@@ -928,6 +1050,7 @@
   }
 
   function updateGlowDisplay(g) {
+    const glowStyles = getCurrentGlowStyles();
     if (!g) g = glowStyles[getGlowIndex()];
     document.getElementById('glowCurrentName').textContent = g.name;
     const el = document.getElementById('glowCustomColors');
@@ -936,7 +1059,51 @@
   }
 
   function syncGlowUI() {
+    const glowStyles = getCurrentGlowStyles();
     updateGlowDisplay(glowStyles[getGlowIndex()]);
+    syncRingVariantUI();
+  }
+
+  // === RING VARIANTS ===
+  const ringVariants = [
+    { id: 'classic', name: 'Klasyczny' },
+    { id: 'no-ticks', name: 'Bez kresek' },
+    { id: 'major-only', name: 'Tylko glowne kreski' },
+    { id: 'dots', name: 'Kropki' },
+    { id: 'thin', name: 'Cienki pierscien' },
+    { id: 'thick', name: 'Gruby pierscien' },
+    { id: 'dashed', name: 'Przerywany' },
+    { id: 'double', name: 'Podwojny' },
+    { id: 'minimal-arc', name: 'Minimalny luk' },
+    { id: 'glow-ring', name: 'Swiecacy pierscien' },
+  ];
+
+  function getRingVariantIndex() {
+    const active = currentState.ringVariant || 'classic';
+    const idx = ringVariants.findIndex(v => v.id === active);
+    return idx >= 0 ? idx : 0;
+  }
+
+  function cycleRingVariant(dir) {
+    let idx = getRingVariantIndex() + dir;
+    if (idx < 0) idx = ringVariants.length - 1;
+    if (idx >= ringVariants.length) idx = 0;
+    const v = ringVariants[idx];
+    currentState.ringVariant = v.id;
+    socket.emit('set-ring-variant', v.id);
+    document.getElementById('ringVariantName').textContent = v.name;
+  }
+
+  function syncRingVariantUI() {
+    const style = currentState.timerDisplayStyle || 'cyber';
+    const section = document.getElementById('ringVariantSection');
+    if (style === 'ring') {
+      section.style.display = 'block';
+      const v = ringVariants[getRingVariantIndex()];
+      document.getElementById('ringVariantName').textContent = v.name;
+    } else {
+      section.style.display = 'none';
+    }
   }
 
   // === TIMER LABEL ===
@@ -1124,6 +1291,11 @@
   }
 
   // === SECTIONS ===
+  function togglePreview(toggle) {
+    toggle.classList.toggle('collapsed');
+    document.getElementById('previewContainer').classList.toggle('hidden');
+  }
+
   function toggleSection(header) {
     header.classList.toggle('collapsed');
     header.nextElementSibling.classList.toggle('collapsed');
@@ -1202,10 +1374,10 @@
     document.getElementById('dangerColor').value = state.timerDangerColor || '#ff0040';
     document.getElementById('warningThreshold').value = state.warningThreshold || 300;
     document.getElementById('dangerThreshold').value = state.dangerThreshold || 60;
-    document.getElementById('finishMessage').value = state.finishMessage || '⏰ CZAS MINĄŁ!';
-    document.getElementById('warningMessage').value = state.warningMessage || '⚠ CZAS SIĘ KOŃCZY ⚠';
-    document.getElementById('dangerMessage').value = state.dangerMessage || '🚨 OSTATNIE SEKUNDY! 🚨';
-    document.getElementById('pauseMessage').value = state.pauseMessage || '⏸ PAUZA';
+    document.getElementById('finishMessage').value = state.finishMessage || 'CZAS MINAL!';
+    document.getElementById('warningMessage').value = state.warningMessage || 'CZAS SIE KONCZY';
+    document.getElementById('dangerMessage').value = state.dangerMessage || 'OSTATNIE SEKUNDY!';
+    document.getElementById('pauseMessage').value = state.pauseMessage || 'PAUZA';
     document.getElementById('timerLabelInput').value = state.timerLabel || '';
     document.getElementById('labelFont').value = state.labelFont || 'Rajdhani';
     document.getElementById('labelSize').value = state.labelSize || 100;
