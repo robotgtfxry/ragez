@@ -424,13 +424,14 @@
   /* === RING STYLE === */
   .ring-wrapper {
     position: relative;
-    width: clamp(280px, 50vw, 550px);
-    height: clamp(280px, 50vw, 550px);
+    width: clamp(220px, 38vw, 420px);
+    height: clamp(220px, 38vw, 420px);
     margin: 0 auto;
   }
   .ring-svg {
     width: 100%; height: 100%;
     transform: rotate(-90deg);
+    overflow: visible;
   }
   .ring-bg {
     fill: none;
@@ -461,10 +462,11 @@
   }
   .ring-time {
     font-family: 'Orbitron', monospace;
-    font-size: clamp(36px, 8vw, 80px);
+    font-size: clamp(24px, 5vw, 52px);
     font-weight: 900;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
     transition: color 0.5s;
+    white-space: nowrap;
   }
   .ring-label {
     font-family: 'Rajdhani', sans-serif;
@@ -497,14 +499,6 @@
 
   .ring-variant-thick .ring-progress { stroke-width: 26; }
   .ring-variant-thick .ring-bg { stroke-width: 24; }
-
-  .ring-variant-dashed .ring-progress {
-    stroke-dasharray: 20 8;
-    stroke-linecap: butt;
-  }
-  .ring-variant-dashed .ring-bg {
-    stroke-dasharray: 20 8;
-  }
 
   .ring-variant-double .ring-bg-outer {
     display: block;
@@ -940,14 +934,11 @@
       outerBg.style.display = 'none';
       outerProgress.style.display = 'none';
     }
-    // Dashed variant - need to reset dasharray for progress
+    // Reset ring progress to clean state
     const progress = document.getElementById('ringProgress');
-    if (variant === 'dashed') {
-      // Dashed handled by CSS, but we need to not use the regular dasharray logic
-      progress.setAttribute('stroke-dasharray', '20 8');
-    } else {
-      progress.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE);
-    }
+    progress.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE);
+    progress.style.strokeDashoffset = '0';
+    progress.style.strokeLinecap = 'round';
   }
 
   function switchTimerStyle(style) {
@@ -970,17 +961,8 @@
     document.getElementById('ringTime').textContent = timeStr;
     document.getElementById('ringTime').style.color = color;
     const currentVariant = (window._currentState && window._currentState.ringVariant) || 'classic';
-    if (currentVariant === 'dashed') {
-      // For dashed, manipulate visibility via stroke-dashoffset on a different scale
-      const totalSegments = Math.ceil(RING_CIRCUMFERENCE / 28); // 28 = 20+8
-      const activeSegments = Math.round(totalSegments * progress);
-      const dashLen = activeSegments * 28;
-      document.getElementById('ringProgress').style.strokeDasharray = `20 8`;
-      document.getElementById('ringProgress').style.strokeDashoffset = -(RING_CIRCUMFERENCE - dashLen);
-    } else {
-      const ringOffset = RING_CIRCUMFERENCE * (1 - progress);
-      document.getElementById('ringProgress').style.strokeDashoffset = ringOffset;
-    }
+    const ringOffset = RING_CIRCUMFERENCE * (1 - progress);
+    document.getElementById('ringProgress').style.strokeDashoffset = ringOffset;
     document.getElementById('ringGradStop1').setAttribute('stop-color', color);
     document.getElementById('ringGradStop2').setAttribute('stop-color', color);
     if (currentVariant === 'glow-ring') {
@@ -1286,6 +1268,21 @@
   }
   document.addEventListener('click', enterFullscreen, { once: true });
   document.addEventListener('touchstart', enterFullscreen, { once: true });
+
+  // Wake Lock - prevent screen from sleeping
+  let wakeLock = null;
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch(e) {}
+  }
+  requestWakeLock();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
 </script>
 </body>
 </html>

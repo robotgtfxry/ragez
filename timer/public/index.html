@@ -268,32 +268,13 @@
 
 <div class="bg-grid"></div>
 
-<div class="container">
-  <div class="title">HACKATHON TIMER</div>
-  <div class="subtitle">Wybierz tryb</div>
-
   <div class="cards">
     <a class="card card-display" href="#" onclick="goDisplay(); return false;">
-      <div class="card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-      </div>
       <div class="card-title">DISPLAY</div>
-      <div class="card-desc">Ekran timera na projektor</div>
     </a>
 
     <a class="card card-panel" href="#" onclick="showPasswordPrompt(); return false;">
-      <div class="card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-      </div>
       <div class="card-title">PANEL</div>
-      <div class="card-desc">Zdalne sterowanie timerem</div>
     </a>
   </div>
 </div>
@@ -302,8 +283,6 @@
 <div class="overlay" id="passwordOverlay">
   <button class="close-btn" onclick="closePassword()">&times;</button>
   <div class="password-box">
-    <h2>PANEL</h2>
-    <p>Podaj haslo aby uzyskac dostep</p>
     <input type="password" class="password-input" id="passwordInput" placeholder="Haslo..." autofocus>
     <button class="password-btn" onclick="checkPassword()">WEJDZ</button>
     <div class="error-msg" id="errorMsg"></div>
@@ -315,8 +294,6 @@
 </div>
 
 <script>
-  const PANEL_PASSWORD = 'admin';
-
   function goDisplay() {
     window.location.href = '/display.html';
   }
@@ -336,21 +313,38 @@
   function checkPassword() {
     const input = document.getElementById('passwordInput');
     const error = document.getElementById('errorMsg');
+    const btn = document.querySelector('.password-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
 
-    if (input.value === PANEL_PASSWORD) {
-      window.location.href = '/remote.html';
-    } else {
-      input.classList.add('error');
-      error.textContent = 'Bledne haslo';
-      setTimeout(() => input.classList.remove('error'), 400);
-      input.value = '';
-      // Show ban image
-      document.getElementById('banOverlay').classList.add('visible');
-      setTimeout(() => {
-        document.getElementById('banOverlay').classList.remove('visible');
-        input.focus();
-      }, 2000);
-    }
+    fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: input.value }),
+    })
+    .then(r => r.json().then(data => ({ ok: r.ok, data })))
+    .then(({ ok, data }) => {
+      if (ok && data.ok) {
+        window.location.href = '/remote.html';
+      } else {
+        input.classList.add('error');
+        error.textContent = 'Bledne haslo';
+        setTimeout(() => input.classList.remove('error'), 400);
+        input.value = '';
+        btn.disabled = false;
+        btn.textContent = 'WEJDZ';
+        document.getElementById('banOverlay').classList.add('visible');
+        setTimeout(() => {
+          document.getElementById('banOverlay').classList.remove('visible');
+          input.focus();
+        }, 2000);
+      }
+    })
+    .catch(() => {
+      error.textContent = 'Blad polaczenia';
+      btn.disabled = false;
+      btn.textContent = 'WEJDZ';
+    });
   }
 
   // Enter key support

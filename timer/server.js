@@ -14,7 +14,20 @@ const io = new Server(server, {
 // Trust proxy (for running behind nginx/reverse proxy)
 app.set('trust proxy', true);
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Panel password
+const PANEL_PASSWORD = process.env.PANEL_PASSWORD || 'pciowyadmin';
+
+app.post('/api/auth', (req, res) => {
+  const { password } = req.body;
+  if (password === PANEL_PASSWORD) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false });
+  }
+});
 
 // Health-check / status endpoint
 app.get('/status', (req, res) => {
