@@ -112,12 +112,21 @@
     border-radius: 12px 12px 0 0;
     border-bottom: none;
   }
-  .preview-container iframe {
+  .preview-content {
+    display: flex;
+    gap: 0;
+    height: 100%;
+  }
+  .preview-iframe-wrap {
+    flex: 0 0 55%;
+    position: relative;
+    height: 100%;
+  }
+  .preview-iframe-wrap iframe {
     width: 100%;
     height: 100%;
     border: none;
     pointer-events: none;
-    transform-origin: top left;
   }
   .preview-label {
     position: absolute;
@@ -130,6 +139,75 @@
     border-radius: 10px;
     font-weight: 700;
     letter-spacing: 0.1em;
+  }
+  .preview-devices {
+    flex: 1;
+    border-left: 1px solid rgba(255,255,255,0.08);
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .devices-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .device-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .device-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 6px var(--primary);
+    flex-shrink: 0;
+  }
+  .device-dot.remote { background: #648cff; box-shadow: 0 0 6px #648cff; }
+  .device-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+  .device-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .device-name {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 11px;
+  }
+  .device-type {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .devices-empty {
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    text-align: center;
+    padding: 20px 0;
+  }
+  .devices-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: auto;
   }
 
   /* === SECTIONS === */
@@ -505,8 +583,17 @@
     <span class="arrow">▼</span>
   </div>
   <div class="preview-container" id="previewContainer">
-    <iframe id="previewFrame" src="/display.html"></iframe>
-    <span class="preview-label">LIVE</span>
+    <div class="preview-content">
+      <div class="preview-iframe-wrap">
+        <iframe id="previewFrame" src="/display.html"></iframe>
+        <span class="preview-label">LIVE</span>
+      </div>
+      <div class="preview-devices" id="devicesPanel">
+        <div class="devices-title">Polaczone urzadzenia</div>
+        <div id="devicesList"></div>
+        <div class="devices-count" id="devicesCount"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -592,6 +679,9 @@
       <input type="text" id="timerLabelInput" placeholder="np. HACKATHON 2026 (puste = brak)" style="flex:1;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;">
       <button class="btn btn-primary" onclick="setTimerLabel()" style="white-space:nowrap;">Ustaw</button>
     </div>
+
+    <label>Kolor napisu</label>
+    <input type="color" id="labelColor" value="#ffffff" onchange="updateLabelStyle()">
 
     <label>Czcionka napisu</label>
     <select id="labelFont" onchange="updateLabelStyle()" style="width:100%;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;">
@@ -682,7 +772,7 @@
     <div class="info-text">Tekst wyświetlany gdy zbliża się koniec</div>
 
     <label>Komunikat zagrożenia</label>
-    <input type="text" id="dangerMessage" value="OSTATNIE SEKUNDY!" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
+    <input type="text" id="dangerMessage" value="OSTATNIE SEKUNDY" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
     <div class="info-text">Tekst wyświetlany w ostatnich sekundach</div>
 
     <label>Komunikat pauzy</label>
@@ -692,7 +782,7 @@
     <div class="divider"></div>
 
     <label>Komunikat końcowy</label>
-    <input type="text" id="finishMessage" value="CZAS MINAL!" onchange="updateFinishMessage()">
+    <input type="text" id="finishMessage" value="CZAS MINAL" onchange="updateFinishMessage()">
 
     <label>Obrazek końcowy</label>
     <div class="file-upload" onclick="document.getElementById('finishImageUpload').click()">
@@ -867,6 +957,56 @@
     document.getElementById('statusDot').className = 'status-dot disconnected';
     document.getElementById('connectionStatus').textContent = 'Rozłączony';
   });
+
+  // === CONNECTED DEVICES ===
+  socket.on('connection-count', (data) => {
+    renderDevices(data);
+  });
+
+  function getDeviceName(ua) {
+    if (!ua) return 'Nieznane';
+    if (/iPhone/i.test(ua)) return 'iPhone';
+    if (/iPad/i.test(ua)) return 'iPad';
+    if (/Android.*Mobile/i.test(ua)) return 'Android';
+    if (/Android/i.test(ua)) return 'Android Tablet';
+    if (/Windows/i.test(ua)) return 'Windows PC';
+    if (/Macintosh/i.test(ua)) return 'Mac';
+    if (/Linux/i.test(ua)) return 'Linux';
+    return 'Urzadzenie';
+  }
+
+  function getBrowser(ua) {
+    if (!ua) return '';
+    if (/Edg\//i.test(ua)) return 'Edge';
+    if (/Chrome/i.test(ua)) return 'Chrome';
+    if (/Firefox/i.test(ua)) return 'Firefox';
+    if (/Safari/i.test(ua)) return 'Safari';
+    return '';
+  }
+
+  function renderDevices(data) {
+    const list = document.getElementById('devicesList');
+    const count = document.getElementById('devicesCount');
+    const devices = data.devices || [];
+
+    if (devices.length === 0) {
+      list.innerHTML = '<div class="devices-empty">Brak polaczonych urzadzen</div>';
+    } else {
+      list.innerHTML = devices.map(d => {
+        const name = getDeviceName(d.userAgent);
+        const browser = getBrowser(d.userAgent);
+        const isDisplay = d.role === 'display';
+        return `<div class="device-item">
+          <div class="device-dot ${isDisplay ? '' : 'remote'}"></div>
+          <div class="device-info">
+            <div class="device-name">${name}${browser ? ' / ' + browser : ''}</div>
+            <div class="device-type">${isDisplay ? 'Display' : 'Pilot'} - ${d.ip}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    count.textContent = `Display: ${data.displays} | Pilot: ${data.remotes}`;
+  }
 
   // === BACKGROUNDS ===
   const backgrounds = [
@@ -1121,6 +1261,7 @@
       font: document.getElementById('labelFont').value,
       size: parseInt(document.getElementById('labelSize').value) || 100,
       uppercase: document.getElementById('labelUppercase').checked,
+      color: document.getElementById('labelColor').value,
     });
   }
 
@@ -1374,15 +1515,16 @@
     document.getElementById('dangerColor').value = state.timerDangerColor || '#ff0040';
     document.getElementById('warningThreshold').value = state.warningThreshold || 300;
     document.getElementById('dangerThreshold').value = state.dangerThreshold || 60;
-    document.getElementById('finishMessage').value = state.finishMessage || 'CZAS MINAL!';
+    document.getElementById('finishMessage').value = state.finishMessage || 'CZAS MINAL';
     document.getElementById('warningMessage').value = state.warningMessage || 'CZAS SIE KONCZY';
-    document.getElementById('dangerMessage').value = state.dangerMessage || 'OSTATNIE SEKUNDY!';
+    document.getElementById('dangerMessage').value = state.dangerMessage || 'OSTATNIE SEKUNDY';
     document.getElementById('pauseMessage').value = state.pauseMessage || 'PAUZA';
     document.getElementById('timerLabelInput').value = state.timerLabel || '';
     document.getElementById('labelFont').value = state.labelFont || 'Rajdhani';
     document.getElementById('labelSize').value = state.labelSize || 100;
     document.getElementById('labelSizeVal').textContent = state.labelSize || 100;
     document.getElementById('labelUppercase').checked = state.labelUppercase !== false;
+    document.getElementById('labelColor').value = state.labelColor || '#ffffff';
     document.getElementById('showTimerBar').checked = state.showTimerBar !== false;
     document.getElementById('glowColor1').value = state.glowColor1 || '#00ff88';
     document.getElementById('glowColor2').value = state.glowColor2 || '#0088ff';

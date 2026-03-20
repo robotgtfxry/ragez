@@ -1030,12 +1030,14 @@
     const font = st.labelFont || 'Rajdhani';
     const sizeScale = (st.labelSize || 100) / 100;
     const transform = st.labelUppercase !== false ? 'uppercase' : 'none';
+    const labelColor = st.labelColor || '#ffffff';
     ['timerLabel','ringLabel','classicLabel','minimalLabel','flipLabel'].forEach(id => {
       const el = document.getElementById(id);
       el.textContent = text;
       el.style.fontFamily = `'${font}', sans-serif`;
       el.style.transform = `scale(${sizeScale})`;
       el.style.textTransform = transform;
+      el.style.color = labelColor;
     });
   }
 
@@ -1199,7 +1201,7 @@
       color = st.timerDangerColor || '#ff0040';
       display.className = 'timer-display danger-flash';
       warning.style.display = 'block';
-      warning.textContent = st.dangerMessage || 'OSTATNIE SEKUNDY!';
+      warning.textContent = st.dangerMessage || 'OSTATNIE SEKUNDY';
       warning.style.color = color;
       warning.style.borderColor = color;
       warning.style.background = 'rgba(255,0,0,0.15)';
@@ -1275,23 +1277,15 @@
   // Update every 100ms for smooth countdown
   setInterval(updateDisplay, 100);
 
-  // Init audio on first interaction + fullscreen on click
-  document.addEventListener('click', () => {
-    getAudioCtx();
+  // Auto fullscreen + audio on first click/touch anywhere
+  function enterFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
-  }, { once: true });
-
-  // Show fullscreen hint
-  (function() {
-    const hint = document.createElement('div');
-    hint.textContent = 'Kliknij aby wejsc na pelny ekran';
-    hint.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:rgba(255,255,255,0.6);padding:10px 24px;border-radius:20px;font-family:Rajdhani,sans-serif;font-size:14px;letter-spacing:0.1em;z-index:9999;pointer-events:none;transition:opacity 1s;';
-    document.body.appendChild(hint);
-    setTimeout(() => { hint.style.opacity = '0'; }, 3000);
-    setTimeout(() => { hint.remove(); }, 4000);
-  })();
+    getAudioCtx();
+  }
+  document.addEventListener('click', enterFullscreen, { once: true });
+  document.addEventListener('touchstart', enterFullscreen, { once: true });
 </script>
 </body>
 </html>

@@ -244,6 +244,24 @@
     transition: color 0.2s;
   }
   .close-btn:hover { color: #fff; }
+
+  .ban-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.95);
+    align-items: center;
+    justify-content: center;
+  }
+  .ban-overlay.visible {
+    display: flex;
+  }
+  .ban-overlay img {
+    max-width: 80vw;
+    max-height: 80vh;
+    object-fit: contain;
+  }
 </style>
 </head>
 <body>
@@ -292,19 +310,15 @@
   </div>
 </div>
 
+<div class="ban-overlay" id="banOverlay">
+  <img src="/ban.png" alt="BANNED">
+</div>
+
 <script>
   const PANEL_PASSWORD = 'admin';
 
   function goDisplay() {
-    const w = window.open('/display.html', '_blank');
-    if (w) {
-      // Try to go fullscreen after a short delay
-      setTimeout(() => {
-        try {
-          w.document.documentElement.requestFullscreen();
-        } catch(e) {}
-      }, 500);
-    }
+    window.location.href = '/display.html';
   }
 
   function showPasswordPrompt() {
@@ -330,7 +344,12 @@
       error.textContent = 'Bledne haslo';
       setTimeout(() => input.classList.remove('error'), 400);
       input.value = '';
-      input.focus();
+      // Show ban image
+      document.getElementById('banOverlay').classList.add('visible');
+      setTimeout(() => {
+        document.getElementById('banOverlay').classList.remove('visible');
+        input.focus();
+      }, 2000);
     }
   }
 

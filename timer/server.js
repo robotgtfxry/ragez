@@ -82,6 +82,7 @@ let state = {
   labelFont: 'Rajdhani',       // font family for label
   labelSize: 100,              // label size in % (100 = default)
   labelUppercase: true,        // uppercase transform
+  labelColor: '#ffffff',       // label text color
 
   // Timer bar
   showTimerBar: true,          // show/hide bottom progress bar
@@ -100,6 +101,7 @@ let state = {
 
 let displays = new Set();
 let remotes = new Set();
+let clientInfo = new Map(); // socketId -> { role, ip, userAgent, connectedAt }
 
 function getNetworkIP() {
   const interfaces = os.networkInterfaces();
@@ -113,6 +115,14 @@ function getNetworkIP() {
   return 'localhost';
 }
 
+function broadcastConnections() {
+  const devices = [];
+  clientInfo.forEach((info, id) => {
+    devices.push({ id, ...info });
+  });
+  io.emit('connection-count', { displays: displays.size, remotes: remotes.size, devices });
+}
+
 io.on('connection', (socket) => {
   const clientIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
 
@@ -124,11 +134,18 @@ io.on('connection', (socket) => {
       remotes.add(socket.id);
       socket.role = 'remote';
     }
+    const ua = socket.handshake.headers['user-agent'] || '';
+    clientInfo.set(socket.id, {
+      role: socket.role,
+      ip: clientIP.replace('::ffff:', ''),
+      userAgent: ua,
+      connectedAt: Date.now(),
+    });
     console.log(`[+] ${role} connected from ${clientIP} (displays: ${displays.size}, remotes: ${remotes.size})`);
     // Send current state
     socket.emit('state-sync', state);
-    // Broadcast connection count to all remotes
-    io.emit('connection-count', { displays: displays.size, remotes: remotes.size });
+    // Broadcast connection info to all
+    broadcastConnections();
   });
 
   // Timer controls
@@ -269,6 +286,7 @@ io.on('connection', (socket) => {
     if (data.font !== undefined) state.labelFont = data.font;
     if (data.size !== undefined) state.labelSize = data.size;
     if (data.uppercase !== undefined) state.labelUppercase = data.uppercase;
+    if (data.color !== undefined) state.labelColor = data.color;
     io.emit('state-sync', state);
   });
 
@@ -349,8 +367,9 @@ io.on('connection', (socket) => {
     const role = socket.role || 'unknown';
     displays.delete(socket.id);
     remotes.delete(socket.id);
+    clientInfo.delete(socket.id);
     console.log(`[-] ${role} disconnected from ${clientIP} (displays: ${displays.size}, remotes: ${remotes.size})`);
-    io.emit('connection-count', { displays: displays.size, remotes: remotes.size });
+    broadcastConnections();
   });
 });
 
