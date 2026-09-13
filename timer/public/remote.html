@@ -2,1527 +2,512 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#06060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Hackathon Timer - Pilot</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
-
-  :root {
-    --primary: #00ff88;
-    --bg: #0a0a1a;
-    --card: #12122a;
-    --card-border: #1e1e3a;
-    --text: #e0e0ff;
-    --text-muted: #8888aa;
-    --danger: #ff0040;
-    --warning: #ff6b35;
-    --success: #00ff88;
-    --accent: #7c3aed;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    min-height: 100vh;
-    padding-bottom: 80px;
-  }
-
-  /* === HEADER === */
-  .header {
-    background: linear-gradient(135deg, #12122a, #1e1e3a);
-    border-bottom: 1px solid var(--card-border);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .header h1 {
-    font-family: 'Orbitron', monospace;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--primary);
-  }
-  .status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 8px var(--success);
-    animation: pulse 2s ease infinite;
-  }
-  .status-dot.disconnected { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-  /* === PREVIEW === */
-  .preview-wrapper {
-    margin: 12px;
-  }
-  .preview-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    cursor: pointer;
-    user-select: none;
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .preview-toggle:hover {
-    background: rgba(255,255,255,0.05);
-  }
-  .preview-toggle .arrow {
-    transition: transform 0.3s ease;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .preview-toggle.collapsed .arrow {
-    transform: rotate(-90deg);
-  }
-  .preview-container {
-    border-radius: 0;
-    overflow: hidden;
-    border: 2px solid var(--card-border);
-    border-top: none;
-    position: relative;
-    aspect-ratio: 16/9;
-    background: #000;
-    transition: max-height 0.4s ease, opacity 0.3s ease;
-    max-height: 500px;
-    opacity: 1;
-  }
-  .preview-container.hidden {
-    max-height: 0;
-    opacity: 0;
-    border: none;
-    pointer-events: none;
-  }
-  .preview-container.hidden + .devices-bar {
-    display: none;
-  }
-  .preview-toggle:not(.collapsed) {
-    border-radius: 12px 12px 0 0;
-    border-bottom: none;
-  }
-  .preview-container iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    pointer-events: none;
-  }
-  .preview-label {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(0,0,0,0.7);
-    color: var(--primary);
-    font-size: 10px;
-    padding: 3px 8px;
-    border-radius: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-  }
-
-  /* === DEVICES PANEL === */
-  .devices-bar {
-    margin: 0 12px;
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-top: none;
-    border-radius: 0 0 12px 12px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .devices-bar-title {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .devices-list {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    flex: 1;
-  }
-  .device-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-  .device-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--primary);
-    box-shadow: 0 0 6px var(--primary);
-    flex-shrink: 0;
-  }
-  .device-dot.remote { background: #648cff; box-shadow: 0 0 6px #648cff; }
-  .devices-count {
-    font-size: 10px;
-    color: rgba(255,255,255,0.25);
-    white-space: nowrap;
-    margin-left: auto;
-  }
-
-  /* === SECTIONS === */
-  .section {
-    margin: 12px;
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .section-header {
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-    font-weight: 700;
-    font-size: 15px;
-    border-bottom: 1px solid var(--card-border);
-    background: rgba(255,255,255,0.02);
-  }
-  .section-header .icon { font-size: 18px; }
-  .section-header .arrow { margin-left: auto; transition: transform 0.3s; font-size: 12px; }
-  .section-header.collapsed .arrow { transform: rotate(-90deg); }
-  .section-body { padding: 16px; }
-  .section-body.collapsed { display: none; }
-
-  /* === FORM ELEMENTS === */
-  label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-    margin-top: 12px;
-  }
-  label:first-child { margin-top: 0; }
-
-  input[type="number"], input[type="text"], input[type="color"], select, textarea {
-    width: 100%;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 10px 12px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    outline: none;
-    transition: border-color 0.3s;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--primary);
-  }
-  textarea { resize: vertical; min-height: 60px; }
-
-  input[type="color"] {
-    height: 44px;
-    padding: 4px;
-    cursor: pointer;
-  }
-
-  input[type="range"] {
-    width: 100%;
-    margin: 8px 0;
-    accent-color: var(--primary);
-  }
-
-  /* === BUTTONS === */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .btn:active { transform: scale(0.95); }
-
-  .btn-primary {
-    background: var(--primary);
-    color: #000;
-  }
-  .btn-primary:hover { box-shadow: 0 0 20px rgba(0,255,136,0.3); }
-
-  .btn-danger {
-    background: var(--danger);
-    color: #fff;
-  }
-
-  .btn-warning {
-    background: var(--warning);
-    color: #000;
-  }
-
-  .btn-accent {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .btn-outline {
-    background: transparent;
-    border: 1px solid var(--card-border);
-    color: var(--text);
-  }
-  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
-
-  .btn-sm { padding: 6px 12px; font-size: 13px; }
-  .btn-full { width: 100%; }
-  .btn-icon { width: 44px; height: 44px; padding: 0; }
-
-  .btn-group {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .btn-group .btn { flex: 1; min-width: 0; }
-
-  /* === TIMER CONTROLS === */
-  .timer-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-  .timer-inputs input {
-    text-align: center;
-    font-family: 'Orbitron', monospace;
-    font-size: 24px;
-    font-weight: 700;
-  }
-
-  .timer-target {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .quick-times {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-top: 12px;
-  }
-  .quick-times .btn {
-    font-size: 12px;
-    padding: 8px 4px;
-  }
-
-  /* Current timer display in remote */
-  .remote-timer-display {
-    text-align: center;
-    font-family: 'Orbitron', monospace;
-    font-size: 36px;
-    font-weight: 900;
-    padding: 16px;
-    border-radius: 10px;
-    background: rgba(0,0,0,0.3);
-    margin-bottom: 12px;
-    transition: color 0.3s;
-  }
-
-  /* === BACKGROUND GRID === */
-  .bg-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  .bg-option {
-    aspect-ratio: 16/9;
-    border-radius: 8px;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .bg-option:hover { transform: scale(1.05); }
-  .bg-option.active { border-color: var(--primary); box-shadow: 0 0 12px rgba(0,255,136,0.3); }
-  .bg-option .bg-name {
-    position: absolute;
-    bottom: 2px;
-    left: 0; right: 0;
-    text-align: center;
-    font-size: 8px;
-    font-weight: 600;
-    color: #fff;
-    text-shadow: 0 1px 3px #000;
-  }
-
-  /* === TOGGLE === */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
-  }
-  .toggle-row span { font-size: 14px; }
-  .toggle {
-    position: relative;
-    width: 44px; height: 24px;
-    cursor: pointer;
-  }
-  .toggle input { display: none; }
-  .toggle-slider {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(255,255,255,0.1);
-    border-radius: 24px;
-    transition: 0.3s;
-  }
-  .toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    top: 3px; left: 3px;
-    transition: 0.3s;
-  }
-  .toggle input:checked + .toggle-slider {
-    background: var(--primary);
-  }
-  .toggle input:checked + .toggle-slider::before {
-    transform: translateX(20px);
-  }
-
-  /* === COLOR PAIR === */
-  .color-pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  /* === FILE UPLOAD === */
-  .file-upload {
-    border: 2px dashed var(--card-border);
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.3s;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-  .file-upload:hover { border-color: var(--primary); }
-  .file-upload input { display: none; }
-
-  /* === TABS === */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--card-border);
-  }
-  .tab {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    color: var(--text-muted);
-    transition: all 0.2s;
-  }
-  .tab.active {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
-  }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  /* === MISC === */
-  .divider {
-    height: 1px;
-    background: var(--card-border);
-    margin: 16px 0;
-  }
-
-  .info-text {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
-  }
-
-  .row { display: flex; gap: 8px; align-items: end; }
-  .row > * { flex: 1; }
-
-  .add-time-btns {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-top: 8px;
-  }
-
-  /* === DISPLAY STYLE PICKER === */
-  .display-style-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-  .ds-option {
-    border-radius: 10px;
-    cursor: pointer;
-    border: 2px solid var(--card-border);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    background: rgba(0,0,0,0.4);
-    padding: 10px 4px 8px;
-    text-align: center;
-  }
-  .ds-option:hover { transform: scale(1.03); }
-  .ds-option.active {
-    border-color: var(--primary);
-    box-shadow: 0 0 12px rgba(0,255,136,0.3);
-  }
-  .ds-option .ds-icon { font-size: 22px; margin-bottom: 4px; }
-  .ds-option .ds-name {
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* === GLOW SWITCHER === */
-  .glow-switcher {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .glow-current {
-    flex: 1;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: 0.05em;
-  }
-  .glow-custom-colors {
-    display: none;
-    margin-top: 8px;
-  }
-  .glow-custom-colors.visible { display: block; }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/remote.css">
 </head>
-<body>
+<body class="booting">
 
-<div class="header">
-  <h1>PILOT</h1>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <span style="font-size:12px;color:var(--text-muted)" id="connectionStatus">Połączony</span>
-    <div class="status-dot" id="statusDot"></div>
-  </div>
-</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></symbol>
+  <symbol id="i-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-chevron-up" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+</svg>
 
-<!-- LIVE PREVIEW -->
-<div class="preview-wrapper">
-  <div class="preview-toggle" onclick="togglePreview(this)">
-    <span>PODGLAD NA ZYWO</span>
-    <span class="arrow">▼</span>
-  </div>
-  <div class="preview-container" id="previewContainer">
-    <iframe id="previewFrame" src="/display.html"></iframe>
-    <span class="preview-label">LIVE</span>
-  </div>
-</div>
-<div class="devices-bar" id="devicesBar">
-  <div class="devices-bar-title">Polaczone:</div>
-  <div class="devices-list" id="devicesList"></div>
-  <div class="devices-count" id="devicesCount"></div>
-</div>
-
-<!-- TIMER CONTROLS -->
-<div class="section">
-  <div class="section-header" onclick="toggleSection(this)">
-    <span class="icon">⏱</span> Timer
-    <span class="arrow">▼</span>
-  </div>
-  <div class="section-body">
-    <div class="remote-timer-display" id="remoteTimer">00:00:00</div>
-
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab(this, 'tabDuration')">Odliczanie</div>
-      <div class="tab" onclick="switchTab(this, 'tabTarget')">Do godziny</div>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><svg class="i"><use href="#i-clock"/></svg></div>
+    <div>
+      <div class="brand-title">PILOT</div>
+      <div class="brand-sub">Hackathon Timer</div>
     </div>
+  </div>
+  <div class="topbar-right">
+    <div class="conn" id="conn"><span class="conn-dot"></span><span id="connText">Łączenie…</span></div>
+    <button class="icon-btn" id="btnLogout" title="Wyloguj" aria-label="Wyloguj"><svg class="i"><use href="#i-logout"/></svg></button>
+  </div>
+</header>
 
-    <div class="tab-content active" id="tabDuration">
-      <label>Ustaw czas (G : M : S)</label>
-      <div class="timer-inputs">
-        <input type="number" id="setHours" min="0" max="99" value="0" placeholder="GG">
-        <input type="number" id="setMinutes" min="0" max="59" value="25" placeholder="MM">
-        <input type="number" id="setSeconds" min="0" max="59" value="0" placeholder="SS">
+<main class="app">
+  <div class="col col-main">
+
+    <!-- LIVE TIMER -->
+    <section class="card hero" id="hero">
+      <div class="hero-head">
+        <span class="phase-chip" id="heroPhase">Gotowy</span>
+        <span class="hero-end" id="heroEnd"></span>
       </div>
-      <div class="quick-times">
-        <button class="btn btn-outline btn-sm" onclick="quickTime(0,5,0)">5 min</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(0,10,0)">10 min</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(0,15,0)">15 min</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(0,25,0)">25 min</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(0,30,0)">30 min</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(0,45,0)">45 min</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(1,0,0)">1 godz</button>
-        <button class="btn btn-outline btn-sm" onclick="quickTime(2,0,0)">2 godz</button>
+      <div class="hero-time" id="heroTime">00:00</div>
+      <div class="hero-bar"><div class="hero-bar-fill" id="heroBar"></div></div>
+
+      <div class="hero-controls">
+        <button class="btn btn-lg btn-warn" id="btnPause" disabled><svg class="i"><use id="btnPauseIcon" href="#i-pause"/></svg><span class="lbl" id="btnPauseLbl">Pauza</span></button>
+        <button class="btn btn-lg btn-danger" id="btnStop" disabled><svg class="i"><use href="#i-stop"/></svg><span class="lbl">Stop</span></button>
       </div>
-      <div style="margin-top:12px">
-        <button class="btn btn-primary btn-full" onclick="startTimer()">▶ STARTUJ TIMER</button>
+
+      <div class="adjust-grid">
+        <button class="btn btn-sm minus" data-add="-60">−1 min</button>
+        <button class="btn btn-sm minus" data-add="-30">−30 s</button>
+        <button class="btn btn-sm minus" data-add="-10">−10 s</button>
+        <button class="btn btn-sm" data-add="10">+10 s</button>
+        <button class="btn btn-sm" data-add="30">+30 s</button>
+        <button class="btn btn-sm" data-add="60">+1 min</button>
+        <button class="btn btn-sm" data-add="300">+5 min</button>
+        <button class="btn btn-sm" data-add="600">+10 min</button>
+        <button class="btn btn-sm" data-add="1800">+30 min</button>
       </div>
-    </div>
 
-    <div class="tab-content" id="tabTarget">
-      <label>Odliczaj do godziny</label>
-      <div class="timer-target">
-        <input type="number" id="targetHour" min="0" max="23" value="17" placeholder="GG">
-        <input type="number" id="targetMinute" min="0" max="59" value="0" placeholder="MM">
+      <div class="hero-foot">
+        <span class="screens" id="heroScreens"><svg class="i"><use href="#i-monitor"/></svg><span id="heroScreensText">—</span></span>
+        <span class="kbd-hints"><kbd>Spacja</kbd> pauza · <kbd>+</kbd><kbd>−</kbd> minuta</span>
       </div>
-      <div style="margin-top:12px">
-        <button class="btn btn-primary btn-full" onclick="startTimerUntil()">▶ ODLICZAJ DO GODZINY</button>
+    </section>
+
+    <!-- NEW COUNTDOWN -->
+    <section class="card" id="newTimer">
+      <div class="card-title"><svg class="i"><use href="#i-play"/></svg>Nowe odliczanie</div>
+      <div class="seg" id="timerTabs">
+        <button class="seg-btn active" data-tab="duration">Odliczanie</button>
+        <button class="seg-btn" data-tab="until">Do godziny</button>
       </div>
-    </div>
 
-    <div class="divider"></div>
-
-    <div class="btn-group">
-      <button class="btn btn-warning" onclick="pauseTimer()" id="btnPause">⏸ PAUZA</button>
-      <button class="btn btn-primary" onclick="resumeTimer()" id="btnResume" style="display:none">▶ WZNÓW</button>
-      <button class="btn btn-danger" onclick="stopTimer()">⏹ STOP</button>
-    </div>
-
-    <label>Dodaj / odejmij czas</label>
-    <div class="add-time-btns">
-      <button class="btn btn-outline btn-sm" onclick="addTime(-60)">-1 min</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(-30)">-30s</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(-10)">-10s</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(10)">+10s</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(30)">+30s</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(60)">+1 min</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(300)">+5 min</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(600)">+10 min</button>
-      <button class="btn btn-outline btn-sm" onclick="addTime(1800)">+30 min</button>
-    </div>
-  </div>
-</div>
-
-<!-- TIMER STYLE -->
-<div class="section">
-  <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon"></span> Styl timera i ostrzezenia
-    <span class="arrow">▼</span>
-  </div>
-  <div class="section-body collapsed">
-    <label>Napis pod timerem</label>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input type="text" id="timerLabelInput" placeholder="np. HACKATHON 2026 (puste = brak)" style="flex:1;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;">
-      <button class="btn btn-primary" onclick="setTimerLabel()" style="white-space:nowrap;">Ustaw</button>
-    </div>
-
-    <label>Kolor napisu</label>
-    <input type="color" id="labelColor" value="#ffffff" onchange="updateLabelStyle()">
-
-    <label>Czcionka napisu</label>
-    <select id="labelFont" onchange="updateLabelStyle()" style="width:100%;background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;">
-      <option value="Rajdhani">Rajdhani (domyślna)</option>
-      <option value="Orbitron">Orbitron (futurystyczna)</option>
-      <option value="JetBrains Mono">JetBrains Mono (monospace)</option>
-      <option value="Space Mono">Space Mono (retro)</option>
-      <option value="Arial">Arial (klasyczna)</option>
-      <option value="Georgia">Georgia (szeryfowa)</option>
-      <option value="Impact">Impact (mocna)</option>
-      <option value="Courier New">Courier New (maszyna)</option>
-    </select>
-
-    <label style="margin-top:10px;">Wielkość napisu: <span id="labelSizeVal">100</span>%</label>
-    <input type="range" id="labelSize" min="50" max="250" value="100" oninput="document.getElementById('labelSizeVal').textContent=this.value;updateLabelStyle()" style="width:100%;accent-color:var(--primary);">
-
-    <div style="margin-top:8px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="labelUppercase" checked onchange="updateLabelStyle()" style="accent-color:var(--primary);width:18px;height:18px;">
-        Wielkie litery (UPPERCASE)
-      </label>
-    </div>
-
-    <div class="divider"></div>
-
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="showTimerBar" checked onchange="toggleTimerBar()" style="accent-color:var(--primary);width:18px;height:18px;">
-      Pokaż pasek postępu (na dole ekranu)
-    </label>
-
-    <div class="divider"></div>
-
-    <label>Styl wyświetlania timera</label>
-    <div class="display-style-grid" id="displayStyleGrid"></div>
-
-    <div class="divider"></div>
-
-    <label>Opcje stylu</label>
-    <div class="glow-switcher">
-      <button class="btn btn-outline btn-icon" onclick="cycleGlow(-1)">◀</button>
-      <span class="glow-current" id="glowCurrentName">Neon</span>
-      <button class="btn btn-outline btn-icon" onclick="cycleGlow(1)">▶</button>
-    </div>
-    <div class="glow-custom-colors" id="glowCustomColors">
-      <div class="color-pair">
-        <div>
-          <label>Glow kolor 1</label>
-          <input type="color" id="glowColor1" value="#00ff88" onchange="updateGlowColors()">
+      <div class="tab-pane" id="tabDuration">
+        <div class="time-fields">
+          <div class="tf">
+            <button class="tf-step" data-target="setHours" data-step="1" aria-label="Więcej godzin"><svg class="i"><use href="#i-chevron-up"/></svg></button>
+            <input type="number" id="setHours" min="0" max="99" value="0" inputmode="numeric" aria-label="Godziny">
+            <button class="tf-step" data-target="setHours" data-step="-1" aria-label="Mniej godzin"><svg class="i"><use href="#i-chevron"/></svg></button>
+            <span class="tf-unit">Godz</span>
+          </div>
+          <div class="tf">
+            <button class="tf-step" data-target="setMinutes" data-step="1" aria-label="Więcej minut"><svg class="i"><use href="#i-chevron-up"/></svg></button>
+            <input type="number" id="setMinutes" min="0" max="59" value="25" inputmode="numeric" aria-label="Minuty">
+            <button class="tf-step" data-target="setMinutes" data-step="-1" aria-label="Mniej minut"><svg class="i"><use href="#i-chevron"/></svg></button>
+            <span class="tf-unit">Min</span>
+          </div>
+          <div class="tf">
+            <button class="tf-step" data-target="setSeconds" data-step="5" aria-label="Więcej sekund"><svg class="i"><use href="#i-chevron-up"/></svg></button>
+            <input type="number" id="setSeconds" min="0" max="59" value="0" inputmode="numeric" aria-label="Sekundy">
+            <button class="tf-step" data-target="setSeconds" data-step="-5" aria-label="Mniej sekund"><svg class="i"><use href="#i-chevron"/></svg></button>
+            <span class="tf-unit">Sek</span>
+          </div>
         </div>
-        <div>
-          <label>Glow kolor 2</label>
-          <input type="color" id="glowColor2" value="#0088ff" onchange="updateGlowColors()">
+        <div class="presets">
+          <button class="btn btn-sm" data-preset="0,5,0">5 min</button>
+          <button class="btn btn-sm" data-preset="0,10,0">10 min</button>
+          <button class="btn btn-sm" data-preset="0,15,0">15 min</button>
+          <button class="btn btn-sm" data-preset="0,25,0">25 min</button>
+          <button class="btn btn-sm" data-preset="0,30,0">30 min</button>
+          <button class="btn btn-sm" data-preset="0,45,0">45 min</button>
+          <button class="btn btn-sm" data-preset="1,0,0">1 godz</button>
+          <button class="btn btn-sm" data-preset="2,0,0">2 godz</button>
+          <button class="btn btn-sm" data-preset="12,0,0">12 godz</button>
+          <button class="btn btn-sm" data-preset="24,0,0">24 godz</button>
+        </div>
+        <div class="start-hint" id="durationHint"></div>
+        <button class="btn btn-lg btn-primary btn-block" id="btnStart"><svg class="i"><use href="#i-play"/></svg><span class="lbl">Startuj timer</span></button>
+      </div>
+
+      <div class="tab-pane" id="tabUntil" hidden>
+        <input type="time" class="until-input" id="targetTime" value="17:00" aria-label="Godzina końca">
+        <div class="start-hint" id="untilHint"></div>
+        <button class="btn btn-lg btn-primary btn-block" id="btnStartUntil"><svg class="i"><use href="#i-target"/></svg><span class="lbl">Odliczaj do godziny</span></button>
+      </div>
+    </section>
+
+    <!-- LIVE PREVIEW -->
+    <section class="card preview-card">
+      <button class="card-toggle" id="previewToggle" aria-expanded="true">
+        <svg class="i"><use href="#i-monitor"/></svg>Podgląd na żywo
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </button>
+      <div class="preview-body" id="previewBody">
+        <div class="preview-stage" id="previewStage">
+          <iframe id="previewFrame" title="Podgląd ekranu" tabindex="-1"></iframe>
+          <span class="live-badge">LIVE</span>
         </div>
       </div>
-    </div>
-
-    <div id="ringVariantSection" style="display:none;">
-      <div class="divider"></div>
-      <label>Wariant kolka</label>
-      <div class="glow-switcher">
-        <button class="btn btn-outline btn-icon" onclick="cycleRingVariant(-1)">&#9664;</button>
-        <span class="glow-current" id="ringVariantName">Klasyczny</span>
-        <button class="btn btn-outline btn-icon" onclick="cycleRingVariant(1)">&#9654;</button>
+      <div class="devices">
+        <div id="devicesList" style="display:contents"></div>
+        <span class="devices-count" id="devicesCount"></span>
       </div>
-    </div>
-
-    <label>Kolor timera (normalny)</label>
-    <input type="color" id="timerColor" value="#00ff88" onchange="updateTimerColors()">
-
-    <label>Kolor ostrzeżenia</label>
-    <input type="color" id="warningColor" value="#ff6b35" onchange="updateTimerColors()">
-
-    <label>Kolor zagrożenia</label>
-    <input type="color" id="dangerColor" value="#ff0040" onchange="updateTimerColors()">
-
-    <label>Próg ostrzeżenia (sekundy)</label>
-    <input type="number" id="warningThreshold" value="300" min="0" onchange="updateTimerColors()">
-    <div class="info-text">Kolor zmieni się gdy zostanie tyle sekund</div>
-
-    <label>Próg zagrożenia (sekundy)</label>
-    <input type="number" id="dangerThreshold" value="60" min="0" onchange="updateTimerColors()">
-    <div class="info-text">Ostatnie sekundy - miganie i alarm</div>
-
-    <div class="divider"></div>
-
-    <label>Komunikat ostrzeżenia</label>
-    <input type="text" id="warningMessage" value="CZAS SIE KONCZY" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
-    <div class="info-text">Tekst wyświetlany gdy zbliża się koniec</div>
-
-    <label>Komunikat zagrożenia</label>
-    <input type="text" id="dangerMessage" value="OSTATNIE SEKUNDY" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
-    <div class="info-text">Tekst wyświetlany w ostatnich sekundach</div>
-
-    <label>Komunikat pauzy</label>
-    <input type="text" id="pauseMessage" value="PAUZA" onchange="updateTimerColors()" style="background:var(--bg);border:1px solid var(--card-border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;font-family:'Rajdhani',sans-serif;width:100%;box-sizing:border-box;">
-    <div class="info-text">Tekst wyświetlany podczas pauzy</div>
-
-    <div class="divider"></div>
-
-    <label>Komunikat końcowy</label>
-    <input type="text" id="finishMessage" value="CZAS MINAL" onchange="updateFinishMessage()">
-
-    <label>Obrazek końcowy</label>
-    <div class="file-upload" onclick="document.getElementById('finishImageUpload').click()">
-      Kliknij aby dodac obrazek<br><small>Wyswietli sie gdy czas minie</small>
-      <input type="file" id="finishImageUpload" accept="image/*" onchange="uploadFinishImage(this)">
-    </div>
-    <div id="finishImagePreview" style="margin-top:8px;display:none">
-      <img id="finishImgPrev" style="max-width:100%;border-radius:8px" />
-      <button class="btn btn-danger btn-sm" onclick="removeFinishImage()" style="margin-top:4px">Usuń obrazek</button>
-    </div>
-
-    <div style="margin-top:12px">
-      <button class="btn btn-outline btn-full" onclick="resetFinish()">Schowaj ekran końcowy</button>
-    </div>
+    </section>
   </div>
-</div>
 
-<!-- ANNOUNCEMENTS -->
-<div class="section">
-  <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon"></span> Komunikaty
-    <span class="arrow">▼</span>
-  </div>
-  <div class="section-body collapsed">
-    <label>Treść komunikatu</label>
-    <textarea id="announcementText" placeholder="Wpisz komunikat do wyświetlenia..."></textarea>
+  <div class="col col-side">
 
-    <div class="color-pair">
-      <div>
-        <label>Kolor tekstu</label>
-        <input type="color" id="annTextColor" value="#ffffff">
+    <!-- LOOK -->
+    <details class="panel" data-key="look">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-droplet"/></svg></span>
+        <span class="panel-head"><b>Wygląd timera</b><small>Styl, poświata, kolory, efekty</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="sub-title">Styl wyświetlania</div>
+        <div class="style-grid" id="styleGrid">
+          <button class="style-tile" data-style="cyber"><span class="pv"><span class="pv-cyber">25:00</span></span><b>Cyber</b></button>
+          <button class="style-tile" data-style="ring"><span class="pv pv-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16"/><circle class="fg" cx="20" cy="20" r="16"/></svg><span>25:00</span></span><b>Pierścień</b></button>
+          <button class="style-tile" data-style="classic"><span class="pv"><span class="pv-classic"><i>00</i><i>25</i><i>00</i></span></span><b>Klasyk</b></button>
+          <button class="style-tile" data-style="minimal"><span class="pv"><span class="pv-minimal"><span>25:00</span><u></u></span></span><b>Minimal</b></button>
+          <button class="style-tile" data-style="flip"><span class="pv"><span class="pv-flip"><i>2</i><i>5</i><em>:</em><i>0</i><i>0</i></span></span><b>Flip</b></button>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sub-title">Poświata</div>
+        <div class="chips" id="glowChips"></div>
+        <div class="color-row two" id="glowCustom" hidden>
+          <label class="color-field"><input type="color" id="glowColor1" value="#00ff88"><span>Poświata 1</span></label>
+          <label class="color-field"><input type="color" id="glowColor2" value="#0088ff"><span>Poświata 2</span></label>
+        </div>
+
+        <div id="ringVariantBlock" hidden>
+          <div class="divider"></div>
+          <div class="sub-title">Wariant pierścienia</div>
+          <div class="chips" id="ringChips"></div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sub-title">Kolory odliczania</div>
+        <div class="color-row" style="margin-top:0">
+          <label class="color-field"><input type="color" id="timerColor" value="#00ff88"><span>Normalny</span></label>
+          <label class="color-field"><input type="color" id="warningColor" value="#ff6b35"><span>Ostrzeżenie</span></label>
+          <label class="color-field"><input type="color" id="dangerColor" value="#ff0040"><span>Zagrożenie</span></label>
+        </div>
+
+        <div class="divider"></div>
+        <div class="toggle-list">
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Pasek postępu</b><small>Świecąca linia na dole ekranu</small></span>
+            <span class="switch"><input type="checkbox" id="showTimerBar" checked><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Wielkie odliczanie 10 s</b><small>Gigantyczne cyfry w ostatnich sekundach</small></span>
+            <span class="switch"><input type="checkbox" id="finalCountdown" checked><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Zegar w rogu</b><small>Aktualna godzina w lewym górnym rogu</small></span>
+            <span class="switch"><input type="checkbox" id="showClock"><span class="switch-track"></span></span>
+          </label>
+        </div>
       </div>
-      <div>
-        <label>Kolor tła</label>
-        <input type="color" id="annBgColor" value="#000000">
+    </details>
+
+    <!-- LABEL -->
+    <details class="panel" data-key="label" style="--tone:#7cc4ff">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-type"/></svg></span>
+        <span class="panel-head"><b>Napis pod timerem</b><small>Nazwa wydarzenia, etap, hasło</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="field">
+          <span class="field-label">Treść</span>
+          <div class="input-row">
+            <input type="text" id="timerLabelInput" maxlength="120" placeholder="np. HACKATHON 2026 (puste = brak)">
+            <button class="btn btn-primary" id="btnSetLabel">Ustaw</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Czcionka</span>
+          <select id="labelFont">
+            <option value="Rajdhani">Rajdhani (domyślna)</option>
+            <option value="Orbitron">Orbitron (futurystyczna)</option>
+            <option value="Chakra Petch">Chakra Petch (techniczna)</option>
+            <option value="JetBrains Mono">JetBrains Mono (monospace)</option>
+            <option value="Space Mono">Space Mono (retro)</option>
+            <option value="Arial">Arial (klasyczna)</option>
+            <option value="Georgia">Georgia (szeryfowa)</option>
+            <option value="Impact">Impact (mocna)</option>
+            <option value="Courier New">Courier New (maszyna)</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="field-label">Wielkość <output id="labelSizeVal">100%</output></span>
+          <input type="range" id="labelSize" min="50" max="250" value="100">
+        </div>
+        <div class="color-row two">
+          <label class="color-field"><input type="color" id="labelColor" value="#ffffff"><span>Kolor napisu</span></label>
+          <label class="color-field" style="justify-content:space-between">
+            <span>WIELKIE LITERY</span>
+            <span class="switch"><input type="checkbox" id="labelUppercase" checked><span class="switch-track"></span></span>
+          </label>
+        </div>
       </div>
-    </div>
+    </details>
 
-    <label>Rozmiar tekstu: <span id="annFontSizeVal">48</span>px</label>
-    <input type="range" id="annFontSize" min="16" max="120" value="48" oninput="document.getElementById('annFontSizeVal').textContent=this.value">
-
-    <label>Czas wyświetlania (sekundy, 0 = bez limitu)</label>
-    <input type="number" id="annDuration" value="10" min="0">
-
-    <label>Pozycja</label>
-    <select id="annPosition">
-      <option value="top">Góra ekranu</option>
-      <option value="center">Środek ekranu</option>
-      <option value="bottom" selected>Dół ekranu</option>
-    </select>
-
-    <div style="margin-top:12px" class="btn-group">
-      <button class="btn btn-accent btn-full" onclick="sendAnnouncement()">WYSLIJ</button>
-      <button class="btn btn-outline" onclick="clearAnnouncement()">✕ USUŃ</button>
-    </div>
-
-    <div class="divider"></div>
-    <label>Szybkie komunikaty</label>
-    <div class="quick-times">
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('PREZENTACJE ZA 5 MINUT!')">Prezentacje</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('PRZERWA!')">Przerwa</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('ODDAJCIE PROJEKTY!')">Oddaj projekt</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAnnouncement('BRAWO!')">Brawo</button>
-    </div>
-  </div>
-</div>
-
-<!-- BACKGROUNDS -->
-<div class="section">
-  <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon"></span> Tlo ekranu
-    <span class="arrow">▼</span>
-  </div>
-  <div class="section-body collapsed">
-    <div class="bg-grid" id="bgGrid"></div>
-
-    <div class="divider"></div>
-    <label>Własne tło (gradient)</label>
-    <div class="color-pair">
-      <div>
-        <label>Kolor 1</label>
-        <input type="color" id="customBg1" value="#0a0a2e">
+    <!-- WARNINGS -->
+    <details class="panel" data-key="warnings" style="--tone:#ff8a3d">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-alert"/></svg></span>
+        <span class="panel-head"><b>Ostrzeżenia</b><small>Progi czasu i komunikaty</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="color-row two" style="margin-top:0">
+          <div class="field">
+            <span class="field-label">Ostrzeżenie (s)</span>
+            <input type="number" id="warningThreshold" value="300" min="0" inputmode="numeric">
+            <span class="hint" id="warningThresholdHint"></span>
+          </div>
+          <div class="field" style="margin-top:0">
+            <span class="field-label">Zagrożenie (s)</span>
+            <input type="number" id="dangerThreshold" value="60" min="0" inputmode="numeric">
+            <span class="hint" id="dangerThresholdHint"></span>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Komunikat ostrzeżenia</span>
+          <input type="text" id="warningMessage" maxlength="80">
+        </div>
+        <div class="field">
+          <span class="field-label">Komunikat zagrożenia</span>
+          <input type="text" id="dangerMessage" maxlength="80">
+        </div>
+        <div class="field">
+          <span class="field-label">Komunikat pauzy</span>
+          <input type="text" id="pauseMessage" maxlength="80">
+          <span class="hint">Pusty komunikat ostrzeżenia lub zagrożenia = bez plakietki na ekranie</span>
+        </div>
       </div>
-      <div>
-        <label>Kolor 2</label>
-        <input type="color" id="customBg2" value="#1a1a4e">
+    </details>
+
+    <!-- FINISH -->
+    <details class="panel" data-key="finish" style="--tone:#ff3b5c">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-flag"/></svg></span>
+        <span class="panel-head"><b>Koniec czasu</b><small>Komunikat, obrazek, fajerwerki</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="field">
+          <span class="field-label">Komunikat końcowy</span>
+          <input type="text" id="finishMessage" maxlength="120">
+        </div>
+        <div class="field">
+          <span class="field-label">Obrazek końcowy</span>
+          <div class="dropzone" id="finishDrop">
+            <svg class="i"><use href="#i-upload"/></svg>
+            <b>Wybierz lub upuść obrazek</b>
+            <small>Pojawi się 5 s po komunikacie</small>
+            <input type="file" id="finishImageUpload" accept="image/*">
+          </div>
+          <div class="media-preview" id="finishPreview" hidden>
+            <img id="finishImgPrev" alt="">
+            <span class="hint">Obrazek końcowy</span>
+            <button class="btn btn-sm btn-danger" id="btnRemoveFinish"><svg class="i"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="toggle-list">
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Fajerwerki na koniec</b><small>Pokaz na ekranie, gdy czas minie</small></span>
+            <span class="switch"><input type="checkbox" id="celebration" checked><span class="switch-track"></span></span>
+          </label>
+        </div>
+        <button class="btn btn-block" id="btnResetFinish" style="margin-top:8px"><svg class="i"><use href="#i-x"/></svg>Schowaj ekran końcowy</button>
       </div>
-    </div>
-    <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="setCustomBg()">Zastosuj własne tło</button>
+    </details>
 
-    <div class="divider"></div>
-    <label>Własne tło ze zdjęcia</label>
-    <input type="file" accept="image/*" id="bgImageInput" onchange="uploadBgImage(this)" style="display:none">
-    <button class="btn btn-accent btn-full" onclick="document.getElementById('bgImageInput').click()">Wybierz zdjecie</button>
-    <div id="bgImagePreview" style="display:none;margin-top:8px;text-align:center;">
-      <img id="bgImagePrev" style="max-width:100%;max-height:120px;border-radius:8px;border:2px solid var(--primary);">
-      <button class="btn btn-danger btn-full" style="margin-top:6px" onclick="removeBgImage()">Usuń zdjęcie tła</button>
-    </div>
+    <!-- ANNOUNCEMENTS -->
+    <details class="panel" data-key="announce" style="--tone:#b99bff">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-message"/></svg></span>
+        <span class="panel-head"><b>Komunikaty</b><small>Wiadomości na ekranie projektora</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="ann-live" id="annLive" hidden>
+          <span id="annLiveText"></span>
+          <button class="btn btn-sm btn-ghost" id="btnClearAnnLive"><svg class="i"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="field">
+          <span class="field-label">Treść komunikatu</span>
+          <textarea id="announcementText" maxlength="500" placeholder="Wpisz komunikat… (Ctrl+Enter wysyła)"></textarea>
+        </div>
+        <div class="color-row two">
+          <label class="color-field"><input type="color" id="annTextColor" value="#ffffff"><span>Kolor tekstu</span></label>
+          <label class="color-field"><input type="color" id="annBgColor" value="#000000"><span>Kolor tła</span></label>
+        </div>
+        <div class="field">
+          <span class="field-label">Rozmiar tekstu <output id="annFontSizeVal">48 px</output></span>
+          <input type="range" id="annFontSize" min="16" max="140" value="48">
+        </div>
+        <div class="field">
+          <span class="field-label">Czas wyświetlania</span>
+          <div class="chips" id="annDurationChips">
+            <button class="chip-btn" data-duration="5">5 s</button>
+            <button class="chip-btn active" data-duration="10">10 s</button>
+            <button class="chip-btn" data-duration="30">30 s</button>
+            <button class="chip-btn" data-duration="60">1 min</button>
+            <button class="chip-btn" data-duration="300">5 min</button>
+            <button class="chip-btn" data-duration="0">Bez limitu</button>
+          </div>
+          <input type="hidden" id="annDuration" value="10">
+        </div>
+        <div class="field">
+          <span class="field-label">Pozycja</span>
+          <div class="seg" id="annPosition">
+            <button class="seg-btn" data-pos="top">Góra</button>
+            <button class="seg-btn" data-pos="center">Środek</button>
+            <button class="seg-btn active" data-pos="bottom">Dół</button>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-lg btn-violet" id="btnSendAnn"><svg class="i"><use href="#i-send"/></svg>Wyślij</button>
+          <button class="btn btn-lg" id="btnClearAnn"><svg class="i"><use href="#i-x"/></svg>Usuń</button>
+        </div>
+        <div class="divider"></div>
+        <div class="sub-title">Szybkie komunikaty</div>
+        <div class="quick-grid">
+          <button class="btn btn-sm" data-text="PREZENTACJE ZA 5 MINUT!">🎤 Prezentacje za 5 min</button>
+          <button class="btn btn-sm" data-text="PRZERWA!">☕ Przerwa</button>
+          <button class="btn btn-sm" data-text="ODDAJCIE PROJEKTY!">📦 Oddajcie projekty</button>
+          <button class="btn btn-sm" data-text="BRAWO!">👏 Brawo</button>
+          <button class="btn btn-sm" data-text="JEDZENIE CZEKA! 🍕">🍕 Jedzenie czeka</button>
+          <button class="btn btn-sm" data-text="CISZA — TRWA PREZENTACJA">🤫 Cisza, prezentacja</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- BACKGROUND -->
+    <details class="panel" data-key="background" style="--tone:#4cc9f0">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-image"/></svg></span>
+        <span class="panel-head"><b>Tło ekranu</b><small>Gradienty, własne kolory i zdjęcia</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="bg-grid" id="bgGrid"></div>
+        <div class="divider"></div>
+        <div class="sub-title">Własny gradient</div>
+        <div class="color-row two" style="margin-top:0">
+          <label class="color-field"><input type="color" id="customBg1" value="#0a0a2e"><span>Kolor 1</span></label>
+          <label class="color-field"><input type="color" id="customBg2" value="#1a1a4e"><span>Kolor 2</span></label>
+        </div>
+        <button class="btn btn-block" id="btnCustomBg" style="margin-top:10px">Zastosuj własne tło</button>
+        <div class="divider"></div>
+        <div class="sub-title">Zdjęcie w tle</div>
+        <div class="dropzone" id="bgDrop">
+          <svg class="i"><use href="#i-upload"/></svg>
+          <b>Wybierz lub upuść zdjęcie</b>
+          <small>Zostanie dopasowane do Full HD</small>
+          <input type="file" id="bgImageInput" accept="image/*">
+        </div>
+        <div class="media-preview" id="bgImagePreview" hidden>
+          <img id="bgImagePrev" alt="">
+          <span class="hint">Zdjęcie tła</span>
+          <button class="btn btn-sm btn-danger" id="btnRemoveBg"><svg class="i"><use href="#i-trash"/></svg></button>
+        </div>
+      </div>
+    </details>
+
+    <!-- OVERLAY IMAGE -->
+    <details class="panel" data-key="overlay" style="--tone:#ffd166">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-star"/></svg></span>
+        <span class="panel-head"><b>Logo na ekranie</b><small>Logo wydarzenia lub sponsora</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="dropzone" id="overlayDrop">
+          <svg class="i"><use href="#i-upload"/></svg>
+          <b>Wybierz lub upuść logo</b>
+          <small>PNG z przezroczystością wygląda najlepiej</small>
+          <input type="file" id="overlayUpload" accept="image/*">
+        </div>
+        <div class="media-preview" id="overlayPreview" hidden>
+          <img id="overlayPrev" alt="">
+          <span class="hint">Logo na ekranie</span>
+          <button class="btn btn-sm btn-danger" id="btnRemoveOverlay"><svg class="i"><use href="#i-trash"/></svg></button>
+        </div>
+        <div class="overlay-controls">
+          <div class="pos-grid" id="overlayPos">
+            <button class="pos-btn" data-pos="top-left" aria-label="Lewy górny"></button>
+            <button class="pos-btn" data-pos="top-right" aria-label="Prawy górny"></button>
+            <button class="pos-btn" data-pos="center" aria-label="Środek"></button>
+            <button class="pos-btn" data-pos="bottom-left" aria-label="Lewy dolny"></button>
+            <button class="pos-btn" data-pos="bottom-right" aria-label="Prawy dolny"></button>
+          </div>
+          <div class="field">
+            <span class="field-label">Rozmiar <output id="overlaySizeVal">150 px</output></span>
+            <input type="range" id="overlaySize" min="50" max="600" value="150">
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- SOUNDS -->
+    <details class="panel" data-key="sound" style="--tone:#7cff6b">
+      <summary>
+        <span class="panel-icon"><svg class="i"><use href="#i-volume"/></svg></span>
+        <span class="panel-head"><b>Dźwięki i efekty</b><small>Alarmy, test nagłośnienia, fajerwerki</small></span>
+        <svg class="i chev"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="panel-body">
+        <div class="toggle-list" style="margin-top:0">
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Dźwięki włączone</b><small>Główny wyłącznik</small></span>
+            <span class="switch"><input type="checkbox" id="soundEnabled" checked><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Dźwięk ostrzeżenia</b><small>Przy progu ostrzeżenia i zagrożenia</small></span>
+            <span class="switch"><input type="checkbox" id="warningSound" checked><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Dźwięk końca czasu</b><small>Fanfary i alarm</small></span>
+            <span class="switch"><input type="checkbox" id="finishSound" checked><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span class="toggle-text"><b>Tykanie</b><small>Ostatnie 10 sekund</small></span>
+            <span class="switch"><input type="checkbox" id="tickSound"><span class="switch-track"></span></span>
+          </label>
+        </div>
+        <div class="btn-row" style="grid-template-columns:1fr 1fr">
+          <button class="btn" id="btnTestSound"><svg class="i"><use href="#i-volume"/></svg>Test dźwięku</button>
+          <button class="btn btn-violet" id="btnFireworks"><svg class="i"><use href="#i-zap"/></svg>Fajerwerki</button>
+        </div>
+      </div>
+    </details>
   </div>
-</div>
+</main>
 
-<!-- OVERLAY IMAGE -->
-<div class="section">
-  <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon"></span> Obrazek / logo na ekranie
-    <span class="arrow">▼</span>
-  </div>
-  <div class="section-body collapsed">
-    <div class="file-upload" onclick="document.getElementById('overlayUpload').click()">
-      Kliknij aby dodac logo/obrazek<br><small>Pojawi sie na ekranie projektora</small>
-      <input type="file" id="overlayUpload" accept="image/*" onchange="uploadOverlay(this)">
-    </div>
+<!-- QUICK DOCK (visible when the live timer is scrolled away) -->
+<nav class="dock" id="dock" aria-label="Szybkie sterowanie">
+  <button class="btn nudge" data-add="-60">−1m</button>
+  <div class="dock-time" id="dockTime">00:00</div>
+  <button class="btn icon-only btn-warn" id="dockPause" aria-label="Pauza lub wznów"><svg class="i"><use id="dockPauseIcon" href="#i-pause"/></svg></button>
+  <button class="btn icon-only btn-danger" id="dockStop" aria-label="Stop"><svg class="i"><use href="#i-stop"/></svg></button>
+  <button class="btn nudge" data-add="60">+1m</button>
+</nav>
 
-    <label>Pozycja</label>
-    <select id="overlayPosition" onchange="updateOverlay()">
-      <option value="top-left">Lewy górny</option>
-      <option value="top-right" selected>Prawy górny</option>
-      <option value="bottom-left">Lewy dolny</option>
-      <option value="bottom-right">Prawy dolny</option>
-      <option value="center">Środek</option>
-    </select>
-
-    <label>Rozmiar: <span id="overlaySizeVal">150</span>px</label>
-    <input type="range" id="overlaySize" min="50" max="500" value="150" oninput="document.getElementById('overlaySizeVal').textContent=this.value" onchange="updateOverlay()">
-
-    <div id="overlayPreview" style="display:none;margin-top:8px">
-      <img id="overlayPrev" style="max-width:100px;border-radius:6px" />
-      <button class="btn btn-danger btn-sm" onclick="removeOverlay()" style="margin-top:4px">Usuń</button>
-    </div>
-  </div>
-</div>
-
-<!-- SOUNDS -->
-<div class="section">
-  <div class="section-header collapsed" onclick="toggleSection(this)">
-    <span class="icon"></span> Dzwieki
-    <span class="arrow">▼</span>
-  </div>
-  <div class="section-body collapsed">
-    <div class="toggle-row">
-      <span>Dźwięki włączone</span>
-      <label class="toggle"><input type="checkbox" id="soundEnabled" checked onchange="updateSounds()"><span class="toggle-slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <span>Dźwięk ostrzeżenia</span>
-      <label class="toggle"><input type="checkbox" id="warningSound" checked onchange="updateSounds()"><span class="toggle-slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <span>Dźwięk końca czasu</span>
-      <label class="toggle"><input type="checkbox" id="finishSound" checked onchange="updateSounds()"><span class="toggle-slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <span>Tykanie (ostatnie 10s)</span>
-      <label class="toggle"><input type="checkbox" id="tickSound" onchange="updateSounds()"><span class="toggle-slider"></span></label>
-    </div>
-  </div>
-</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
-  let currentState = {};
-  let overlayImageData = null;
-
-  socket.emit('register', 'remote');
-
-  socket.on('connect', () => {
-    document.getElementById('statusDot').className = 'status-dot';
-    document.getElementById('connectionStatus').textContent = 'Połączony';
-  });
-  socket.on('disconnect', () => {
-    document.getElementById('statusDot').className = 'status-dot disconnected';
-    document.getElementById('connectionStatus').textContent = 'Rozłączony';
-  });
-
-  // === CONNECTED DEVICES ===
-  socket.on('connection-count', (data) => {
-    renderDevices(data);
-  });
-
-  function getDeviceName(ua) {
-    if (!ua) return 'Nieznane';
-    if (/iPhone/i.test(ua)) return 'iPhone';
-    if (/iPad/i.test(ua)) return 'iPad';
-    if (/Android.*Mobile/i.test(ua)) return 'Android';
-    if (/Android/i.test(ua)) return 'Android Tablet';
-    if (/Windows/i.test(ua)) return 'Windows PC';
-    if (/Macintosh/i.test(ua)) return 'Mac';
-    if (/Linux/i.test(ua)) return 'Linux';
-    return 'Urzadzenie';
-  }
-
-  function getBrowser(ua) {
-    if (!ua) return '';
-    if (/Edg\//i.test(ua)) return 'Edge';
-    if (/Chrome/i.test(ua)) return 'Chrome';
-    if (/Firefox/i.test(ua)) return 'Firefox';
-    if (/Safari/i.test(ua)) return 'Safari';
-    return '';
-  }
-
-  function renderDevices(data) {
-    const list = document.getElementById('devicesList');
-    const count = document.getElementById('devicesCount');
-    const devices = data.devices || [];
-
-    if (devices.length === 0) {
-      list.innerHTML = '<span style="font-size:11px;color:rgba(255,255,255,0.2)">--</span>';
-    } else {
-      list.innerHTML = devices.map(d => {
-        const name = getDeviceName(d.userAgent);
-        const isDisplay = d.role === 'display';
-        const label = isDisplay ? 'D' : 'P';
-        return `<div class="device-chip">
-          <div class="device-dot ${isDisplay ? '' : 'remote'}"></div>
-          <span>${name}</span>
-          <span style="opacity:0.4;font-size:9px">${label}</span>
-        </div>`;
-      }).join('');
-    }
-    count.textContent = `${data.displays}D / ${data.remotes}P`;
-  }
-
-  // === BACKGROUNDS ===
-  const backgrounds = [
-    { id: 'bg-dark-gradient', name: 'Ciemny', colors: ['#0a0a2e','#1a0a3e','#0a1a3e'] },
-    { id: 'bg-cyber-purple', name: 'Cyber', colors: ['#1a002e','#3d0066','#0d0022'] },
-    { id: 'bg-ocean-deep', name: 'Ocean', colors: ['#001122','#003355','#000d1a'] },
-    { id: 'bg-fire', name: 'Ogień', colors: ['#1a0000','#4d0000','#1a0500'] },
-    { id: 'bg-matrix', name: 'Matrix', colors: ['#000a00','#001a00','#000800'] },
-    { id: 'bg-sunset', name: 'Zachód', colors: ['#1a0022','#661a00','#332200'] },
-    { id: 'bg-arctic', name: 'Arktyka', colors: ['#0a1628','#162d50','#051020'] },
-    { id: 'bg-neon-city', name: 'Neon', colors: ['#0d001a','#1a0033','#001a0d'] },
-    { id: 'bg-midnight', name: 'Północ', colors: ['#000000','#1a1a2e','#000000'] },
-    { id: 'bg-volcano', name: 'Wulkan', colors: ['#1a0500','#4d1a00','#0d0500'] },
-    { id: 'bg-aurora', name: 'Aurora', colors: ['#001a0d','#001a33','#1a0033'] },
-    { id: 'bg-galaxy', name: 'Galaktyka', colors: ['#0a001a','#000d1a','#1a000d'] },
-  ];
-
-  function renderBgGrid() {
-    const grid = document.getElementById('bgGrid');
-    grid.innerHTML = '';
-    backgrounds.forEach(bg => {
-      const div = document.createElement('div');
-      div.className = 'bg-option' + (currentState.background === bg.id ? ' active' : '');
-      div.style.background = `linear-gradient(135deg, ${bg.colors.join(',')})`;
-      div.innerHTML = `<span class="bg-name">${bg.name}</span>`;
-      div.onclick = () => socket.emit('set-background', bg.id);
-      grid.appendChild(div);
-    });
-
-    // Show/hide bg image preview based on state
-    if (currentState.customBgImage && currentState.background === 'bg-image') {
-      document.getElementById('bgImagePrev').src = currentState.customBgImage;
-      document.getElementById('bgImagePreview').style.display = 'block';
-    }
-  }
-
-  // === TIMER ===
-  function quickTime(h, m, s) {
-    document.getElementById('setHours').value = h;
-    document.getElementById('setMinutes').value = m;
-    document.getElementById('setSeconds').value = s;
-  }
-
-  function startTimer() {
-    socket.emit('start-timer', {
-      hours: parseInt(document.getElementById('setHours').value) || 0,
-      minutes: parseInt(document.getElementById('setMinutes').value) || 0,
-      seconds: parseInt(document.getElementById('setSeconds').value) || 0,
-    });
-  }
-
-  function startTimerUntil() {
-    socket.emit('start-timer-until', {
-      targetHour: parseInt(document.getElementById('targetHour').value) || 0,
-      targetMinute: parseInt(document.getElementById('targetMinute').value) || 0,
-    });
-  }
-
-  function pauseTimer() { socket.emit('pause-timer'); }
-  function resumeTimer() { socket.emit('resume-timer'); }
-  function stopTimer() { socket.emit('stop-timer'); }
-  function addTime(sec) { socket.emit('add-time', sec); }
-
-  // === TIMER DISPLAY STYLES ===
-  const displayStyles = [
-    { id: 'cyber', name: 'Cyber', icon: 'C' },
-    { id: 'ring', name: 'Kolowy', icon: 'O' },
-    { id: 'classic', name: 'Klasyk', icon: 'K' },
-    { id: 'minimal', name: 'Minimal', icon: '--' },
-    { id: 'flip', name: 'Retro', icon: '#' },
-  ];
-
-  // Each display style has its own set of glow options
-  const styleGlowOptions = {
-    cyber: [
-      { id: 'none', name: 'Brak' },
-      { id: 'soft', name: 'Miekki' },
-      { id: 'neon', name: 'Neon' },
-      { id: 'intense', name: 'Intensywny' },
-      { id: 'pulse', name: 'Pulsujacy' },
-      { id: 'electric', name: 'Elektryczny' },
-      { id: 'matrix', name: 'Matrix' },
-      { id: 'rainbow', name: 'Tecza' },
-      { id: 'custom', name: 'Wlasny kolor' },
-    ],
-    ring: [
-      { id: 'none', name: 'Brak' },
-      { id: 'soft', name: 'Miekki' },
-      { id: 'neon', name: 'Neon' },
-      { id: 'pulse', name: 'Pulsujacy' },
-      { id: 'breathe', name: 'Oddech' },
-      { id: 'fire', name: 'Ogien' },
-      { id: 'ice', name: 'Lod' },
-      { id: 'rainbow', name: 'Tecza' },
-      { id: 'custom', name: 'Wlasny kolor' },
-    ],
-    classic: [
-      { id: 'none', name: 'Brak' },
-      { id: 'subtle', name: 'Delikatny' },
-      { id: 'soft', name: 'Miekki' },
-      { id: 'warm', name: 'Cieply' },
-      { id: 'cold', name: 'Zimny' },
-      { id: 'shadow', name: 'Cien' },
-      { id: 'custom', name: 'Wlasny kolor' },
-    ],
-    minimal: [
-      { id: 'none', name: 'Brak' },
-      { id: 'subtle', name: 'Delikatny' },
-      { id: 'soft', name: 'Miekki' },
-      { id: 'shadow', name: 'Cien' },
-      { id: 'breathe', name: 'Oddech' },
-    ],
-    flip: [
-      { id: 'none', name: 'Brak' },
-      { id: 'soft', name: 'Miekki' },
-      { id: 'neon', name: 'Neon' },
-      { id: 'retro', name: 'Retro' },
-      { id: 'warm', name: 'Cieply' },
-      { id: 'electric', name: 'Elektryczny' },
-      { id: 'fire', name: 'Ogien' },
-      { id: 'custom', name: 'Wlasny kolor' },
-    ],
-  };
-
-  function getCurrentGlowStyles() {
-    const style = currentState.timerDisplayStyle || 'cyber';
-    return styleGlowOptions[style] || styleGlowOptions.cyber;
-  }
-
-  function renderDisplayStyleGrid() {
-    const grid = document.getElementById('displayStyleGrid');
-    grid.innerHTML = '';
-    displayStyles.forEach(ds => {
-      const div = document.createElement('div');
-      div.className = 'ds-option' + ((currentState.timerDisplayStyle || 'cyber') === ds.id ? ' active' : '');
-      div.innerHTML = `<span class="ds-icon">${ds.icon}</span><span class="ds-name">${ds.name}</span>`;
-      div.onclick = () => {
-        socket.emit('set-timer-display-style', ds.id);
-        currentState.timerDisplayStyle = ds.id;
-        document.querySelectorAll('.ds-option').forEach(el => el.classList.remove('active'));
-        div.classList.add('active');
-        // Reset glow to first available option for new style if current glow is not available
-        const available = getCurrentGlowStyles();
-        const currentGlow = currentState.timerGlowStyle || 'neon';
-        if (!available.find(g => g.id === currentGlow)) {
-          const first = available[0];
-          socket.emit('set-timer-glow', first.id);
-          currentState.timerGlowStyle = first.id;
-        }
-        syncGlowUI();
-      };
-      grid.appendChild(div);
-    });
-  }
-
-  // === GLOW STYLES ===
-  function getGlowIndex() {
-    const glowStyles = getCurrentGlowStyles();
-    const active = currentState.timerGlowStyle || 'neon';
-    const idx = glowStyles.findIndex(g => g.id === active);
-    return idx >= 0 ? idx : 0;
-  }
-
-  function cycleGlow(dir) {
-    const glowStyles = getCurrentGlowStyles();
-    let idx = getGlowIndex() + dir;
-    if (idx < 0) idx = glowStyles.length - 1;
-    if (idx >= glowStyles.length) idx = 0;
-    const g = glowStyles[idx];
-    currentState.timerGlowStyle = g.id;
-    if (g.id === 'custom') {
-      socket.emit('set-timer-glow', {
-        style: 'custom',
-        color1: document.getElementById('glowColor1').value,
-        color2: document.getElementById('glowColor2').value,
-      });
-    } else {
-      socket.emit('set-timer-glow', g.id);
-    }
-    updateGlowDisplay(g);
-  }
-
-  function updateGlowDisplay(g) {
-    const glowStyles = getCurrentGlowStyles();
-    if (!g) g = glowStyles[getGlowIndex()];
-    document.getElementById('glowCurrentName').textContent = g.name;
-    const el = document.getElementById('glowCustomColors');
-    if (g.id === 'custom') el.classList.add('visible');
-    else el.classList.remove('visible');
-  }
-
-  function syncGlowUI() {
-    const glowStyles = getCurrentGlowStyles();
-    updateGlowDisplay(glowStyles[getGlowIndex()]);
-    syncRingVariantUI();
-  }
-
-  // === RING VARIANTS ===
-  const ringVariants = [
-    { id: 'classic', name: 'Klasyczny' },
-    { id: 'no-ticks', name: 'Bez kresek' },
-    { id: 'major-only', name: 'Tylko glowne kreski' },
-    { id: 'dots', name: 'Kropki' },
-    { id: 'thin', name: 'Cienki pierscien' },
-    { id: 'thick', name: 'Gruby pierscien' },
-
-    { id: 'double', name: 'Podwojny' },
-    { id: 'minimal-arc', name: 'Minimalny luk' },
-    { id: 'glow-ring', name: 'Swiecacy pierscien' },
-  ];
-
-  function getRingVariantIndex() {
-    const active = currentState.ringVariant || 'classic';
-    const idx = ringVariants.findIndex(v => v.id === active);
-    return idx >= 0 ? idx : 0;
-  }
-
-  function cycleRingVariant(dir) {
-    let idx = getRingVariantIndex() + dir;
-    if (idx < 0) idx = ringVariants.length - 1;
-    if (idx >= ringVariants.length) idx = 0;
-    const v = ringVariants[idx];
-    currentState.ringVariant = v.id;
-    socket.emit('set-ring-variant', v.id);
-    document.getElementById('ringVariantName').textContent = v.name;
-  }
-
-  function syncRingVariantUI() {
-    const style = currentState.timerDisplayStyle || 'cyber';
-    const section = document.getElementById('ringVariantSection');
-    if (style === 'ring') {
-      section.style.display = 'block';
-      const v = ringVariants[getRingVariantIndex()];
-      document.getElementById('ringVariantName').textContent = v.name;
-    } else {
-      section.style.display = 'none';
-    }
-  }
-
-  // === TIMER LABEL ===
-  function setTimerLabel() {
-    const label = document.getElementById('timerLabelInput').value;
-    socket.emit('set-timer-label', label);
-  }
-  // Enter key support
-  document.getElementById('timerLabelInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') setTimerLabel();
-  });
-
-  function updateLabelStyle() {
-    socket.emit('set-label-style', {
-      font: document.getElementById('labelFont').value,
-      size: parseInt(document.getElementById('labelSize').value) || 100,
-      uppercase: document.getElementById('labelUppercase').checked,
-      color: document.getElementById('labelColor').value,
-    });
-  }
-
-  function toggleTimerBar() {
-    socket.emit('set-timer-bar-visible', document.getElementById('showTimerBar').checked);
-  }
-
-  function updateGlowColors() {
-    socket.emit('set-timer-glow', {
-      style: 'custom',
-      color1: document.getElementById('glowColor1').value,
-      color2: document.getElementById('glowColor2').value,
-    });
-  }
-
-  // === TIMER COLORS ===
-  function updateTimerColors() {
-    socket.emit('set-timer-colors', {
-      timerColor: document.getElementById('timerColor').value,
-      warningColor: document.getElementById('warningColor').value,
-      dangerColor: document.getElementById('dangerColor').value,
-      warningThreshold: parseInt(document.getElementById('warningThreshold').value) || 300,
-      dangerThreshold: parseInt(document.getElementById('dangerThreshold').value) || 60,
-      warningMessage: document.getElementById('warningMessage').value,
-      dangerMessage: document.getElementById('dangerMessage').value,
-      pauseMessage: document.getElementById('pauseMessage').value,
-    });
-  }
-
-  // === FINISH ===
-  function updateFinishMessage() {
-    socket.emit('set-finish-message', document.getElementById('finishMessage').value);
-  }
-
-  function uploadFinishImage(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      socket.emit('set-finish-image', e.target.result);
-      document.getElementById('finishImgPrev').src = e.target.result;
-      document.getElementById('finishImagePreview').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function removeFinishImage() {
-    socket.emit('set-finish-image', null);
-    document.getElementById('finishImagePreview').style.display = 'none';
-  }
-
-  function resetFinish() {
-    socket.emit('reset-finish');
-  }
-
-  // === ANNOUNCEMENTS ===
-  function sendAnnouncement() {
-    const text = document.getElementById('announcementText').value;
-    if (!text.trim()) return;
-    socket.emit('send-announcement', {
-      text: text,
-      textColor: document.getElementById('annTextColor').value,
-      bgColor: document.getElementById('annBgColor').value + 'dd',
-      fontSize: parseInt(document.getElementById('annFontSize').value) || 48,
-      duration: parseInt(document.getElementById('annDuration').value) || 0,
-      position: document.getElementById('annPosition').value,
-      id: Date.now()
-    });
-  }
-
-  function clearAnnouncement() {
-    socket.emit('clear-announcement');
-  }
-
-  function quickAnnouncement(text) {
-    document.getElementById('announcementText').value = text;
-    socket.emit('send-announcement', {
-      text: text,
-      textColor: '#ffffff',
-      bgColor: '#000000dd',
-      fontSize: 48,
-      duration: 10,
-      position: 'bottom',
-      id: Date.now()
-    });
-  }
-
-  // === BACKGROUNDS ===
-  function setCustomBg() {
-    socket.emit('set-custom-bg', {
-      color1: document.getElementById('customBg1').value,
-      color2: document.getElementById('customBg2').value,
-    });
-  }
-
-  function uploadBgImage(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Resize to max 1920px to keep payload reasonable
-        const maxW = 1920, maxH = 1080;
-        let w = img.width, h = img.height;
-        if (w > maxW || h > maxH) {
-          const ratio = Math.min(maxW / w, maxH / h);
-          w = Math.round(w * ratio);
-          h = Math.round(h * ratio);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        document.getElementById('bgImagePrev').src = dataUrl;
-        document.getElementById('bgImagePreview').style.display = 'block';
-        socket.emit('set-custom-bg-image', { image: dataUrl });
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function removeBgImage() {
-    document.getElementById('bgImagePreview').style.display = 'none';
-    document.getElementById('bgImageInput').value = '';
-    socket.emit('set-custom-bg-image', { image: null });
-    socket.emit('set-background', 'bg-dark-gradient');
-  }
-
-  // === OVERLAY ===
-  function uploadOverlay(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      overlayImageData = e.target.result;
-      document.getElementById('overlayPrev').src = overlayImageData;
-      document.getElementById('overlayPreview').style.display = 'block';
-      updateOverlay();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function updateOverlay() {
-    if (!overlayImageData) return;
-    socket.emit('set-overlay-image', {
-      image: overlayImageData,
-      position: document.getElementById('overlayPosition').value,
-      size: parseInt(document.getElementById('overlaySize').value),
-    });
-  }
-
-  function removeOverlay() {
-    overlayImageData = null;
-    socket.emit('remove-overlay-image');
-    document.getElementById('overlayPreview').style.display = 'none';
-  }
-
-  // === SOUNDS ===
-  function updateSounds() {
-    socket.emit('set-sounds', {
-      soundEnabled: document.getElementById('soundEnabled').checked,
-      warningSound: document.getElementById('warningSound').checked,
-      finishSound: document.getElementById('finishSound').checked,
-      tickSound: document.getElementById('tickSound').checked,
-    });
-  }
-
-  // === SECTIONS ===
-  function togglePreview(toggle) {
-    toggle.classList.toggle('collapsed');
-    document.getElementById('previewContainer').classList.toggle('hidden');
-  }
-
-  function toggleSection(header) {
-    header.classList.toggle('collapsed');
-    header.nextElementSibling.classList.toggle('collapsed');
-  }
-
-  function switchTab(tab, contentId) {
-    tab.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    tab.parentElement.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById(contentId).classList.add('active');
-  }
-
-  // === STATE SYNC ===
-  function formatTime(ms) {
-    if (ms <= 0) return '00:00:00';
-    const totalSec = Math.ceil(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (h > 0) {
-      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  }
-
-  function updateRemoteTimer() {
-    const st = currentState;
-    const display = document.getElementById('remoteTimer');
-
-    if (st.timerFinished) {
-      display.textContent = st.finishMessage || 'CZAS MINĄŁ!';
-      display.style.color = st.timerDangerColor || '#ff0040';
-      return;
-    }
-
-    if (!st.timerRunning) {
-      display.textContent = '00:00:00';
-      display.style.color = st.timerColor || '#00ff88';
-      document.getElementById('btnPause').style.display = '';
-      document.getElementById('btnResume').style.display = 'none';
-      return;
-    }
-
-    let remaining;
-    if (st.timerPaused) {
-      remaining = st.timerPausedRemaining;
-      document.getElementById('btnPause').style.display = 'none';
-      document.getElementById('btnResume').style.display = '';
-    } else {
-      remaining = new Date(st.timerEndTime) - Date.now();
-      document.getElementById('btnPause').style.display = '';
-      document.getElementById('btnResume').style.display = 'none';
-    }
-
-    if (remaining <= 0) remaining = 0;
-    const totalSec = remaining / 1000;
-
-    let color = st.timerColor || '#00ff88';
-    if (totalSec <= (st.dangerThreshold || 60)) color = st.timerDangerColor || '#ff0040';
-    else if (totalSec <= (st.warningThreshold || 300)) color = st.timerWarningColor || '#ff6b35';
-
-    display.style.color = color;
-    display.textContent = formatTime(remaining);
-  }
-
-  socket.on('state-sync', (state) => {
-    currentState = state;
-    renderBgGrid();
-    renderDisplayStyleGrid();
-    syncGlowUI();
-    updateRemoteTimer();
-
-    // Sync form values
-    document.getElementById('timerColor').value = state.timerColor || '#00ff88';
-    document.getElementById('warningColor').value = state.timerWarningColor || '#ff6b35';
-    document.getElementById('dangerColor').value = state.timerDangerColor || '#ff0040';
-    document.getElementById('warningThreshold').value = state.warningThreshold || 300;
-    document.getElementById('dangerThreshold').value = state.dangerThreshold || 60;
-    document.getElementById('finishMessage').value = state.finishMessage || 'CZAS MINAL';
-    document.getElementById('warningMessage').value = state.warningMessage || 'CZAS SIE KONCZY';
-    document.getElementById('dangerMessage').value = state.dangerMessage || 'OSTATNIE SEKUNDY';
-    document.getElementById('pauseMessage').value = state.pauseMessage || 'PAUZA';
-    document.getElementById('timerLabelInput').value = state.timerLabel || '';
-    document.getElementById('labelFont').value = state.labelFont || 'Rajdhani';
-    document.getElementById('labelSize').value = state.labelSize || 100;
-    document.getElementById('labelSizeVal').textContent = state.labelSize || 100;
-    document.getElementById('labelUppercase').checked = state.labelUppercase !== false;
-    document.getElementById('labelColor').value = state.labelColor || '#ffffff';
-    document.getElementById('showTimerBar').checked = state.showTimerBar !== false;
-    document.getElementById('glowColor1').value = state.glowColor1 || '#00ff88';
-    document.getElementById('glowColor2').value = state.glowColor2 || '#0088ff';
-    document.getElementById('soundEnabled').checked = state.soundEnabled !== false;
-    document.getElementById('warningSound').checked = state.warningSound !== false;
-    document.getElementById('finishSound').checked = state.finishSound !== false;
-    document.getElementById('tickSound').checked = state.tickSound === true;
-
-    if (state.finishImage) {
-      document.getElementById('finishImgPrev').src = state.finishImage;
-      document.getElementById('finishImagePreview').style.display = 'block';
-    }
-    if (state.overlayImage) {
-      overlayImageData = state.overlayImage;
-      document.getElementById('overlayPrev').src = state.overlayImage;
-      document.getElementById('overlayPreview').style.display = 'block';
-    }
-  });
-
-  // Update remote timer every 100ms
-  setInterval(updateRemoteTimer, 100);
-
-  // Init
-  renderBgGrid();
-  renderDisplayStyleGrid();
-  syncGlowUI();
-</script>
+<script src="/shared.js"></script>
+<script src="/remote.js"></script>
 </body>
 </html>

@@ -3,26 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
 <title>Hackathon Timer - Ekran</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Chakra+Petch:wght@500;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  @property --accent { syntax: '<color>'; inherits: true; initial-value: #00ff88; }
+
+  :root {
+    --accent: #00ff88;
+    --glow-color1: #00ff88;
+    --glow-color2: #0088ff;
+    --label-font: 'Rajdhani';
+    --label-scale: 1;
+    --label-transform: uppercase;
+    --label-color: #ffffff;
+    --digits: 'Orbitron', 'Chakra Petch', monospace;
+    --ui: 'Chakra Petch', 'Rajdhani', sans-serif;
+    transition: --accent 0.9s ease;
+  }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
 
   body {
-    width: 100vw; height: 100vh;
-    overflow: hidden;
     font-family: 'Rajdhani', sans-serif;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 1s ease;
     cursor: none;
-    margin: 0;
-    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
   }
+  body.is-preview { cursor: default; }
 
-  /* === BACKGROUNDS === */
+  /* === BACKGROUNDS (two layers for crossfade) === */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+  }
+  .bg-layer.visible { opacity: 1; }
   .bg-dark-gradient { background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 50%, #0a1a3e 100%); }
   .bg-cyber-purple { background: linear-gradient(135deg, #1a002e 0%, #3d0066 30%, #1a0044 60%, #0d0022 100%); }
   .bg-ocean-deep { background: linear-gradient(135deg, #001122 0%, #003355 40%, #001a33 70%, #000d1a 100%); }
@@ -36,424 +62,377 @@
   .bg-aurora { background: linear-gradient(135deg, #001a0d 0%, #003322 25%, #001a33 50%, #0d0033 75%, #1a0033 100%); }
   .bg-galaxy { background: linear-gradient(135deg, #0a001a 0%, #1a0033 20%, #000d1a 40%, #001a33 60%, #0d001a 80%, #1a000d 100%); }
   .bg-custom { background: linear-gradient(135deg, var(--custom-bg1), var(--custom-bg2)); }
-  .bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
+  .bg-image { background-color: #000; }
 
-  /* === PARTICLES === */
-  .particles {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    pointer-events: none; z-index: 0;
+  /* === AMBIENT LIGHT === */
+  .aurora {
+    position: fixed; inset: -25%; z-index: 1;
+    pointer-events: none;
+    opacity: 0.6;
+    transition: opacity 1.2s ease;
   }
-  .particle {
+  .aurora i {
     position: absolute;
+    width: 70vmax; height: 70vmax;
     border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    animation: float linear infinite;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 62%);
+    will-change: transform;
   }
-  @keyframes float {
-    0% { transform: translateY(100vh) scale(0); opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  .aurora .b1 { top: 0; left: 0; animation: drift1 38s ease-in-out infinite alternate; }
+  .aurora .b2 {
+    bottom: 0; right: 0;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, rgba(90,60,255,0.10)) 0%, transparent 62%);
+    animation: drift2 46s ease-in-out infinite alternate;
   }
+  .aurora .b3 { top: 30%; left: 35%; width: 50vmax; height: 50vmax; opacity: 0.7; animation: drift3 29s ease-in-out infinite alternate; }
+  @keyframes drift1 { to { transform: translate(28vw, 22vh) scale(1.25); } }
+  @keyframes drift2 { to { transform: translate(-30vw, -18vh) scale(0.85); } }
+  @keyframes drift3 { from { transform: translate(-12vw, 10vh) scale(0.9); } to { transform: translate(14vw, -12vh) scale(1.2); } }
+  body.phase-paused .aurora { opacity: 0.25; }
+  body.phase-finished .aurora { opacity: 0; }
+
+  .fx-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #dustCanvas { z-index: 2; }
+  #fireCanvas { z-index: 150; }
+
+  .vignette {
+    position: fixed; inset: 0; z-index: 3;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .danger-edge {
+    position: fixed; inset: 0; z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    box-shadow:
+      inset 0 0 10vmin color-mix(in srgb, var(--accent) 55%, transparent),
+      inset 0 0 35vmin color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  body.level-danger.phase-running .danger-edge { opacity: 1; animation: edgePulse 1s ease-in-out infinite; }
+  @keyframes edgePulse { 50% { opacity: 0.3; } }
 
   /* === TIMER === */
   .timer-container {
     position: relative;
     z-index: 10;
-    text-align: center;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(.2,.8,.2,1);
   }
+  body.phase-paused .timer-container { animation: pausedBreath 2.6s ease-in-out infinite; }
+  @keyframes pausedBreath { 50% { opacity: 0.45; } }
+  body.final .timer-container { opacity: 0.07; transform: scale(0.9); animation: none; }
+
+  .pulse-wrap { width: 100%; display: flex; justify-content: center; }
+  body.level-warning.phase-running .pulse-wrap { animation: warningPulse 2s ease-in-out infinite; }
+  body.level-danger.phase-running .pulse-wrap { animation: dangerFlash 1s ease-in-out infinite; }
+  @keyframes warningPulse { 50% { opacity: 0.78; } }
+  @keyframes dangerFlash { 50% { opacity: 0.85; transform: scale(1.025); } }
+
+  .style-pane { display: none; width: 100%; flex-direction: column; align-items: center; justify-content: center; }
+  .style-pane.style-active { display: flex; }
+
+  /* Fixed-width characters: digits don't wobble when they change */
+  .ch { display: inline-block; width: 1ch; text-align: center; }
+  .sep { display: inline-block; width: 0.45ch; text-align: center; }
+
+  .glowable { color: var(--accent); }
 
   .timer-display {
-    font-family: 'Orbitron', monospace;
+    font-family: var(--digits);
     font-weight: 900;
-    font-size: clamp(80px, 18vw, 280px);
-    letter-spacing: 0.05em;
-    transition: color 0.5s ease, text-shadow 0.5s ease;
+    font-size: min(15.5vw, 34vh);
+    letter-spacing: 0.02em;
     line-height: 1;
+    white-space: nowrap;
   }
+  .timer-display.short { font-size: min(24vw, 50vh); }
 
-  /* === GLOW STYLES === */
-  .glow-none .timer-display {
-    text-shadow: none;
-  }
-  .glow-soft .timer-display {
-    text-shadow:
-      0 0 10px currentColor,
-      0 0 20px rgba(255,255,255,0.1);
-  }
-  .glow-neon .timer-display {
-    text-shadow:
-      0 0 10px currentColor,
-      0 0 30px currentColor,
-      0 0 60px currentColor,
-      0 0 120px currentColor;
-  }
-  .glow-pulse .timer-display {
-    text-shadow:
-      0 0 20px currentColor,
-      0 0 40px currentColor,
-      0 0 80px currentColor;
-    animation: glowPulse 2s ease-in-out infinite;
-  }
-  @keyframes glowPulse {
-    0%, 100% {
-      text-shadow:
-        0 0 10px currentColor,
-        0 0 20px currentColor,
-        0 0 40px currentColor;
-    }
-    50% {
-      text-shadow:
-        0 0 20px currentColor,
-        0 0 60px currentColor,
-        0 0 120px currentColor,
-        0 0 200px currentColor;
-    }
-  }
-  .glow-custom .timer-display {
-    text-shadow:
-      0 0 10px var(--glow-color1, currentColor),
-      0 0 30px var(--glow-color1, currentColor),
-      0 0 60px var(--glow-color2, currentColor),
-      0 0 100px var(--glow-color2, currentColor);
-  }
-
-  /* === EXTRA GLOW STYLES === */
-  .glow-intense .timer-display {
-    text-shadow:
-      0 0 15px currentColor,
-      0 0 40px currentColor,
-      0 0 80px currentColor,
-      0 0 150px currentColor,
-      0 0 250px currentColor;
-  }
-  .glow-subtle .timer-display {
-    text-shadow:
-      0 0 6px rgba(255,255,255,0.15),
-      0 0 12px rgba(255,255,255,0.08);
-  }
-  .glow-fire .timer-display {
-    text-shadow:
-      0 0 10px #ff4400,
-      0 0 30px #ff6600,
-      0 0 60px #ff8800,
-      0 0 100px #ffaa00;
-    animation: firePulse 1.5s ease-in-out infinite;
-  }
-  @keyframes firePulse {
-    0%, 100% {
-      text-shadow:
-        0 0 10px #ff4400,
-        0 0 25px #ff6600,
-        0 0 50px #ff8800;
-    }
-    50% {
-      text-shadow:
-        0 0 15px #ff4400,
-        0 0 40px #ff6600,
-        0 0 80px #ff8800,
-        0 0 130px #ffaa00;
-    }
-  }
-  .glow-ice .timer-display {
-    text-shadow:
-      0 0 10px #00ccff,
-      0 0 30px #0088ff,
-      0 0 60px #0055ff,
-      0 0 100px #0033cc;
-  }
-  .glow-rainbow .timer-display {
-    animation: rainbowGlow 4s linear infinite;
-  }
-  @keyframes rainbowGlow {
-    0%   { text-shadow: 0 0 20px #ff0000, 0 0 60px #ff0000, 0 0 120px #ff0000; }
-    16%  { text-shadow: 0 0 20px #ff8800, 0 0 60px #ff8800, 0 0 120px #ff8800; }
-    33%  { text-shadow: 0 0 20px #ffff00, 0 0 60px #ffff00, 0 0 120px #ffff00; }
-    50%  { text-shadow: 0 0 20px #00ff00, 0 0 60px #00ff00, 0 0 120px #00ff00; }
-    66%  { text-shadow: 0 0 20px #0088ff, 0 0 60px #0088ff, 0 0 120px #0088ff; }
-    83%  { text-shadow: 0 0 20px #8800ff, 0 0 60px #8800ff, 0 0 120px #8800ff; }
-    100% { text-shadow: 0 0 20px #ff0000, 0 0 60px #ff0000, 0 0 120px #ff0000; }
-  }
-  .glow-matrix .timer-display {
-    text-shadow:
-      0 0 8px #00ff41,
-      0 0 25px #00ff41,
-      0 0 50px #008f11,
-      0 0 100px #003b00;
-  }
-  .glow-electric .timer-display {
-    animation: electricFlicker 0.3s ease-in-out infinite alternate;
-  }
-  @keyframes electricFlicker {
-    0% {
-      text-shadow:
-        0 0 10px currentColor,
-        0 0 30px currentColor,
-        0 0 60px currentColor;
-    }
-    25% {
-      text-shadow:
-        0 0 5px currentColor,
-        0 0 15px currentColor;
-    }
-    50% {
-      text-shadow:
-        0 0 15px currentColor,
-        0 0 40px currentColor,
-        0 0 80px currentColor,
-        0 0 140px currentColor;
-    }
-    75% {
-      text-shadow:
-        0 0 8px currentColor,
-        0 0 20px currentColor;
-    }
-    100% {
-      text-shadow:
-        0 0 12px currentColor,
-        0 0 35px currentColor,
-        0 0 70px currentColor;
-    }
-  }
-  .glow-retro .timer-display {
-    text-shadow:
-      2px 2px 0px #ff00ff,
-      -2px -2px 0px #00ffff,
-      0 0 20px #ff00ff,
-      0 0 40px #00ffff;
-  }
-  .glow-warm .timer-display {
-    text-shadow:
-      0 0 10px #ffaa00,
-      0 0 30px #ff8800,
-      0 0 50px #ff6600;
-  }
-  .glow-cold .timer-display {
-    text-shadow:
-      0 0 10px #88ccff,
-      0 0 30px #4488ff,
-      0 0 60px #2244cc;
-  }
-  .glow-breathe .timer-display {
-    animation: breatheGlow 4s ease-in-out infinite;
-  }
-  @keyframes breatheGlow {
-    0%, 100% {
-      text-shadow: 0 0 5px currentColor;
-      opacity: 0.7;
-    }
-    50% {
-      text-shadow:
-        0 0 15px currentColor,
-        0 0 40px currentColor,
-        0 0 80px currentColor;
-      opacity: 1;
-    }
-  }
-  .glow-shadow .timer-display {
-    text-shadow:
-      4px 4px 8px rgba(0,0,0,0.8),
-      0 0 10px rgba(255,255,255,0.1);
-  }
-
-  .timer-label {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(16px, 3vw, 36px);
-    font-weight: 300;
+  .t-label {
+    font-family: var(--label-font), 'Rajdhani', 'Chakra Petch', sans-serif;
+    font-size: calc(clamp(16px, 2.6vw, 44px) * var(--label-scale));
+    font-weight: 500;
     letter-spacing: 0.3em;
-    text-transform: uppercase;
-    opacity: 0.6;
-    margin-top: 10px;
-    color: #ffffff;
+    text-indent: 0.3em;
+    text-transform: var(--label-transform);
+    color: var(--label-color);
+    opacity: 0.7;
+    margin-top: 0.7em;
+    text-align: center;
+    white-space: nowrap;
   }
+  .t-label:empty { display: none; }
+
+  /* === GLOW STYLES (em-based, scale with the digit size) === */
+  .glow-none .glowable { text-shadow: none; }
+  .glow-soft .glowable { text-shadow: 0 0 0.04em currentColor, 0 0 0.1em rgba(255,255,255,0.1); }
+  .glow-neon .glowable {
+    text-shadow: 0 0 0.02em currentColor, 0 0 0.07em color-mix(in srgb, currentColor 80%, transparent), 0 0 0.18em color-mix(in srgb, currentColor 55%, transparent), 0 0 0.4em color-mix(in srgb, currentColor 35%, transparent);
+  }
+  .glow-pulse .glowable { animation: glowPulse 2s ease-in-out infinite; }
+  @keyframes glowPulse {
+    0%, 100% { text-shadow: 0 0 0.035em currentColor, 0 0 0.08em currentColor, 0 0 0.15em currentColor; }
+    50% { text-shadow: 0 0 0.07em currentColor, 0 0 0.22em currentColor, 0 0 0.45em currentColor, 0 0 0.75em currentColor; }
+  }
+  .glow-custom .glowable {
+    text-shadow: 0 0 0.035em var(--glow-color1), 0 0 0.1em var(--glow-color1), 0 0 0.22em var(--glow-color2), 0 0 0.38em var(--glow-color2);
+  }
+  .glow-intense .glowable {
+    text-shadow: 0 0 0.05em currentColor, 0 0 0.14em currentColor, 0 0 0.3em currentColor, 0 0 0.55em currentColor, 0 0 0.9em currentColor;
+  }
+  .glow-subtle .glowable { text-shadow: 0 0 0.02em rgba(255,255,255,0.15), 0 0 0.05em rgba(255,255,255,0.08); }
+  .glow-fire .glowable { animation: firePulse 1.5s ease-in-out infinite; }
+  @keyframes firePulse {
+    0%, 100% { text-shadow: 0 0 0.035em #ff4400, 0 0 0.09em #ff6600, 0 0 0.18em #ff8800; }
+    50% { text-shadow: 0 0 0.05em #ff4400, 0 0 0.14em #ff6600, 0 0 0.3em #ff8800, 0 0 0.5em #ffaa00; }
+  }
+  .glow-ice .glowable { text-shadow: 0 0 0.035em #00ccff, 0 0 0.1em #0088ff, 0 0 0.22em #0055ff, 0 0 0.38em #0033cc; }
+  .glow-rainbow .glowable { animation: rainbowGlow 4s linear infinite; }
+  @keyframes rainbowGlow {
+    0%   { text-shadow: 0 0 0.07em #ff0000, 0 0 0.22em #ff0000, 0 0 0.45em #ff0000; }
+    16%  { text-shadow: 0 0 0.07em #ff8800, 0 0 0.22em #ff8800, 0 0 0.45em #ff8800; }
+    33%  { text-shadow: 0 0 0.07em #ffff00, 0 0 0.22em #ffff00, 0 0 0.45em #ffff00; }
+    50%  { text-shadow: 0 0 0.07em #00ff00, 0 0 0.22em #00ff00, 0 0 0.45em #00ff00; }
+    66%  { text-shadow: 0 0 0.07em #0088ff, 0 0 0.22em #0088ff, 0 0 0.45em #0088ff; }
+    83%  { text-shadow: 0 0 0.07em #8800ff, 0 0 0.22em #8800ff, 0 0 0.45em #8800ff; }
+    100% { text-shadow: 0 0 0.07em #ff0000, 0 0 0.22em #ff0000, 0 0 0.45em #ff0000; }
+  }
+  .glow-matrix .glowable { text-shadow: 0 0 0.03em #00ff41, 0 0 0.09em #00ff41, 0 0 0.18em #008f11, 0 0 0.38em #003b00; }
+  .glow-electric .glowable { animation: electricFlicker 0.3s ease-in-out infinite alternate; }
+  @keyframes electricFlicker {
+    0%   { text-shadow: 0 0 0.035em currentColor, 0 0 0.1em currentColor, 0 0 0.22em currentColor; }
+    25%  { text-shadow: 0 0 0.02em currentColor, 0 0 0.05em currentColor; }
+    50%  { text-shadow: 0 0 0.05em currentColor, 0 0 0.15em currentColor, 0 0 0.3em currentColor, 0 0 0.5em currentColor; }
+    75%  { text-shadow: 0 0 0.03em currentColor, 0 0 0.07em currentColor; }
+    100% { text-shadow: 0 0 0.04em currentColor, 0 0 0.12em currentColor, 0 0 0.25em currentColor; }
+  }
+  .glow-retro .glowable { text-shadow: 0.01em 0.01em 0 #ff00ff, -0.01em -0.01em 0 #00ffff, 0 0 0.07em #ff00ff, 0 0 0.15em #00ffff; }
+  .glow-warm .glowable { text-shadow: 0 0 0.035em #ffaa00, 0 0 0.1em #ff8800, 0 0 0.18em #ff6600; }
+  .glow-cold .glowable { text-shadow: 0 0 0.035em #88ccff, 0 0 0.1em #4488ff, 0 0 0.22em #2244cc; }
+  .glow-breathe .glowable { animation: breatheGlow 4s ease-in-out infinite; }
+  @keyframes breatheGlow {
+    0%, 100% { text-shadow: 0 0 0.02em currentColor; opacity: 0.7; }
+    50% { text-shadow: 0 0 0.05em currentColor, 0 0 0.15em currentColor, 0 0 0.3em currentColor; opacity: 1; }
+  }
+  .glow-shadow .glowable { text-shadow: 0.015em 0.015em 0.03em rgba(0,0,0,0.8), 0 0 0.04em rgba(255,255,255,0.1); }
 
   /* === TIMER BAR === */
   .timer-bar-container {
     position: fixed;
     bottom: 0; left: 0; right: 0;
     height: 8px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.07);
     z-index: 20;
   }
   .timer-bar {
+    position: relative;
     height: 100%;
-    transition: width 0.5s linear, background-color 0.5s ease;
-    box-shadow: 0 0 15px currentColor;
+    width: 100%;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 35%, transparent), var(--accent));
+    box-shadow: 0 0 18px var(--accent), 0 0 4px var(--accent);
   }
+  .timer-bar::after {
+    content: '';
+    position: absolute;
+    right: -14px; top: 50%;
+    width: 28px; height: 28px;
+    margin-top: -14px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, var(--accent) 28%, transparent 70%);
+  }
+  body.phase-idle .timer-bar::after { display: none; }
 
-  /* === WARNING EFFECTS === */
-  .warning-pulse {
-    animation: warningPulse 1s ease-in-out infinite;
-  }
-  @keyframes warningPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  .danger-flash {
-    animation: dangerFlash 0.5s ease-in-out infinite;
-  }
-  @keyframes dangerFlash {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.02); }
-  }
-
+  /* === WARNING PILL === */
   .warning-label {
     position: fixed;
-    top: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(14px, 2.5vw, 28px);
-    font-weight: 700;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    padding: 10px 40px;
-    border-radius: 50px;
-    border: 2px solid;
+    top: 4.5vh; left: 50%;
     z-index: 30;
-    animation: warningBlink 1s ease infinite;
-    display: none;
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    font-family: var(--digits);
+    font-size: clamp(14px, 1.9vw, 34px);
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 0.6em 1.7em 0.6em 1.3em;
+    border-radius: 999px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, rgba(0,0,0,0.45));
+    border: 2px solid color-mix(in srgb, var(--accent) 75%, transparent);
+    box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 0 22px color-mix(in srgb, var(--accent) 14%, transparent);
+    backdrop-filter: blur(10px);
+    transform: translate(-50%, -180%);
+    opacity: 0;
+    transition: transform 0.7s cubic-bezier(.2,.9,.3,1.25), opacity 0.4s ease;
   }
-  @keyframes warningBlink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+  .warning-label.ext { font-family: var(--ui); }
+  .warning-label.show { transform: translate(-50%, 0); opacity: 1; }
+  .warning-label .dot {
+    width: 0.62em; height: 0.62em;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 12px currentColor;
+    animation: warningBlink 1s ease infinite;
+  }
+  @keyframes warningBlink { 50% { opacity: 0.2; } }
+
+  /* === FINAL COUNTDOWN === */
+  .final-count {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  body.final .final-count { opacity: 1; }
+  .final-num {
+    font-family: var(--digits);
+    font-weight: 900;
+    font-size: 62vh;
+    line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 0.03em var(--accent), 0 0 0.12em var(--accent), 0 0 0.35em color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .final-wave {
+    position: absolute;
+    width: 42vh; height: 42vh;
+    border-radius: 50%;
+    border: 0.7vh solid var(--accent);
+    box-shadow: 0 0 40px var(--accent), inset 0 0 40px var(--accent);
+    opacity: 0;
   }
 
   /* === FINISH SCREEN === */
   .finish-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 100;
-    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #000000;
-    animation: finishFadeIn 0.5s ease;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 18%, #000) 0%, #000 72%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.7s ease, visibility 0s linear 0.7s, background 0.8s ease;
   }
-  .finish-overlay.active { display: flex; }
-  @keyframes finishFadeIn {
-    from { opacity: 0; } to { opacity: 1; }
-  }
+  .finish-overlay.active { opacity: 1; visibility: visible; transition: opacity 0.7s ease, background 0.8s ease; }
+  .finish-overlay.show-image { background: #000; }
   .finish-message {
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(40px, 10vw, 120px);
+    font-family: var(--digits);
+    font-size: clamp(40px, 9vw, 190px);
     font-weight: 900;
+    line-height: 1.1;
     color: #ffffff;
-    text-shadow: none;
     text-align: center;
-    padding: 0 20px;
-    transition: opacity 0.5s ease;
+    padding: 0 5vw;
+    letter-spacing: 0.03em;
+    text-shadow: 0 0 0.08em color-mix(in srgb, var(--accent) 90%, transparent), 0 0 0.3em color-mix(in srgb, var(--accent) 55%, transparent);
+    transition: opacity 0.8s ease, transform 0.8s ease;
   }
-  .finish-message.hidden { opacity: 0; pointer-events: none; }
+  .finish-message.ext { font-family: var(--ui); font-weight: 700; }
+  .finish-message .word { display: inline-block; white-space: nowrap; }
+  .finish-message .letter { display: inline-block; }
+  .finish-message.hidden { opacity: 0; transform: scale(0.94); }
   .finish-image {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    inset: 0;
+    width: 100%; height: 100%;
     object-fit: contain;
-    border-radius: 0;
-    box-shadow: none;
-    display: none;
     opacity: 0;
-    transition: opacity 0.8s ease;
+    transition: opacity 0.9s ease;
   }
-  .finish-image.active {
-    display: block;
-    opacity: 1;
-  }
+  .finish-image.active { opacity: 1; }
 
   /* === ANNOUNCEMENT === */
-  .announcement-bar {
+  .announcement {
     position: fixed;
-    left: 0; right: 0;
+    left: 50%;
     z-index: 50;
-    display: none;
-    padding: 20px 40px;
-    text-align: center;
-    font-family: 'Rajdhani', sans-serif;
+    width: max-content;
+    max-width: 88vw;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+  .announcement.pos-top { top: 5vh; }
+  .announcement.pos-bottom { bottom: 7vh; }
+  .announcement.pos-center { top: 50%; transform: translate(-50%, -50%); }
+  .ann-card {
+    position: relative;
+    overflow: hidden;
+    padding: 0.5em 1.3em 0.62em;
+    border-radius: 0.42em;
+    font-family: 'Rajdhani', 'Chakra Petch', sans-serif;
     font-weight: 700;
-    animation: announcementSlide 0.5s ease;
+    line-height: 1.15;
+    text-align: center;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
+    backdrop-filter: blur(14px);
   }
-  .announcement-bar.pos-top { top: 0; }
-  .announcement-bar.pos-center {
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 20px;
-    max-width: 80%;
-    right: auto;
+  .ann-card::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
   }
-  .announcement-bar.pos-bottom { bottom: 60px; }
-  .announcement-bar.active { display: block; }
-  @keyframes announcementSlide {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .announcement-bar.pos-center.active {
-    animation: announcementPop 0.5s ease;
-  }
-  @keyframes announcementPop {
-    from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .ann-progress {
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 100%; height: 3px;
+    background: currentColor;
+    opacity: 0.45;
+    transform-origin: left;
   }
 
   /* === OVERLAY IMAGE === */
   .overlay-image {
     position: fixed;
     z-index: 15;
-    display: none;
     object-fit: contain;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
   }
-  .overlay-image.active { display: block; }
   .overlay-image.pos-top-left { top: 20px; left: 20px; }
   .overlay-image.pos-top-right { top: 20px; right: 20px; }
-  .overlay-image.pos-bottom-left { bottom: 20px; left: 20px; }
-  .overlay-image.pos-bottom-right { bottom: 20px; right: 20px; }
+  .overlay-image.pos-bottom-left { bottom: 28px; left: 20px; }
+  .overlay-image.pos-bottom-right { bottom: 28px; right: 20px; }
   .overlay-image.pos-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
-
-  /* === TIMER STYLE SWITCHING === */
-  .style-cyber, .style-ring, .style-classic, .style-minimal, .style-flip {
-    display: none;
-    width: 100%;
-  }
-  .style-active { display: flex !important; flex-direction: column; align-items: center; justify-content: center; }
 
   /* === RING STYLE === */
   .ring-wrapper {
     position: relative;
-    width: clamp(220px, 38vw, 420px);
-    height: clamp(220px, 38vw, 420px);
-    margin: 0 auto;
+    width: min(78vh, 60vw);
+    height: min(78vh, 60vw);
+    container-type: size;
   }
   .ring-svg {
     width: 100%; height: 100%;
     transform: rotate(-90deg);
     overflow: visible;
   }
-  .ring-bg {
+  .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 12; }
+  .ring-bg-outer { fill: none; stroke: rgba(255,255,255,0.04); stroke-width: 6; }
+  .ring-progress, .ring-progress-outer {
     fill: none;
-    stroke: rgba(255,255,255,0.06);
-    stroke-width: 12;
-  }
-  .ring-progress {
-    fill: none;
-    stroke: url(#ringGrad);
+    stroke: var(--accent);
     stroke-width: 14;
     stroke-linecap: round;
-    transition: stroke-dashoffset 0.5s ease;
-    filter: drop-shadow(0 0 12px rgba(0,255,136,0.5));
+    filter: drop-shadow(0 0 10px var(--accent));
   }
-  .ring-ticks line {
-    stroke: rgba(255,255,255,0.15);
-    stroke-width: 1;
-  }
-  .ring-ticks line.major {
-    stroke: rgba(255,255,255,0.35);
-    stroke-width: 2;
-  }
+  .ring-progress-outer { stroke-width: 6; opacity: 0.4; }
+  .ring-tip { fill: #fff; filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 14px var(--accent)); }
+  body.phase-idle .ring-tip, body.phase-finished .ring-tip { display: none; }
+  .ring-ticks line { stroke: rgba(255,255,255,0.15); stroke-width: 1; }
+  .ring-ticks line.major { stroke: rgba(255,255,255,0.35); stroke-width: 2; }
+  .ring-ticks circle { fill: rgba(255,255,255,0.15); }
+  .ring-ticks circle.major { fill: rgba(255,255,255,0.4); }
   .ring-inner {
     position: absolute;
     top: 50%; left: 50%;
@@ -461,64 +440,30 @@
     text-align: center;
   }
   .ring-time {
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(24px, 5vw, 52px);
+    font-family: var(--digits);
+    font-size: 15cqw;
     font-weight: 900;
-    letter-spacing: 0.02em;
-    transition: color 0.5s;
+    line-height: 1;
     white-space: nowrap;
   }
-  .ring-label {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(12px, 2vw, 22px);
-    font-weight: 300;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    opacity: 0.5;
-    margin-top: 5px;
-  }
+  .ring-time.long { font-size: 9.2cqw; }
+  .ring-inner .t-label { font-size: calc(3.4cqw * var(--label-scale)); margin-top: 0.9em; }
 
-  /* === RING VARIANTS === */
   .ring-variant-no-ticks .ring-ticks { display: none; }
-
   .ring-variant-major-only .ring-ticks line:not(.major) { display: none; }
-
-  .ring-variant-dots .ring-ticks line {
-    stroke-width: 0;
-  }
-  .ring-variant-dots .ring-ticks circle.dot-tick {
-    fill: rgba(255,255,255,0.15);
-  }
-  .ring-variant-dots .ring-ticks circle.dot-tick.major {
-    fill: rgba(255,255,255,0.4);
-    r: 3;
-  }
-
   .ring-variant-thin .ring-progress { stroke-width: 6; }
   .ring-variant-thin .ring-bg { stroke-width: 4; }
-
   .ring-variant-thick .ring-progress { stroke-width: 26; }
   .ring-variant-thick .ring-bg { stroke-width: 24; }
-
-  .ring-variant-double .ring-bg-outer {
-    display: block;
-  }
-  .ring-variant-double .ring-progress-outer {
-    display: block;
-  }
-
+  .ring-variant-thick .ring-ticks { display: none; }
   .ring-variant-minimal-arc .ring-bg { stroke-opacity: 0; }
   .ring-variant-minimal-arc .ring-ticks { display: none; }
-  .ring-variant-minimal-arc .ring-progress { stroke-width: 8; stroke-linecap: round; }
-
+  .ring-variant-minimal-arc .ring-progress { stroke-width: 8; }
   .ring-variant-glow-ring .ring-progress {
     stroke-width: 18;
-    stroke-linecap: round;
+    filter: drop-shadow(0 0 12px var(--accent)) drop-shadow(0 0 30px var(--accent)) drop-shadow(0 0 55px var(--accent));
   }
-  .ring-variant-glow-ring .ring-bg {
-    stroke: rgba(255,255,255,0.03);
-    stroke-width: 18;
-  }
+  .ring-variant-glow-ring .ring-bg { stroke: rgba(255,255,255,0.03); stroke-width: 18; }
   .ring-variant-glow-ring .ring-ticks { display: none; }
 
   /* === CLASSIC STYLE === */
@@ -526,94 +471,73 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: clamp(12px, 3vw, 30px);
+    gap: 0.12em;
+    font-size: min(13vw, 30vh);
   }
+  .classic-cards.two { font-size: min(19vw, 40vh); }
   .classic-card {
-    background: rgba(255,255,255,0.04);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: clamp(12px, 2vw, 24px);
-    padding: clamp(16px, 3vw, 40px) clamp(20px, 4vw, 50px);
+    position: relative;
     text-align: center;
-    min-width: clamp(80px, 15vw, 180px);
-    transition: border-color 0.5s, box-shadow 0.5s;
+    padding: 0.14em 0.2em 0.1em;
+    border-radius: 0.14em;
+    background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.02));
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    box-shadow: 0 0 0.3em color-mix(in srgb, var(--accent) 10%, transparent), 0 0.1em 0.3em rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
+    backdrop-filter: blur(16px);
   }
   .classic-digit {
     display: block;
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(50px, 12vw, 140px);
+    font-family: var(--digits);
+    font-size: 1em;
     font-weight: 900;
     line-height: 1;
-    background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    transition: all 0.5s;
   }
   .classic-unit {
     display: block;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(10px, 1.5vw, 16px);
-    letter-spacing: 0.3em;
-    color: rgba(255,255,255,0.3);
-    margin-top: 8px;
+    font-family: var(--ui);
+    font-size: 0.1em;
+    letter-spacing: 0.35em;
+    text-indent: 0.35em;
+    color: rgba(255,255,255,0.4);
+    margin-top: 0.7em;
     text-transform: uppercase;
   }
-  .classic-sep {
-    font-size: clamp(40px, 10vw, 120px);
-    font-weight: 300;
-    color: rgba(255,255,255,0.15);
-    padding-bottom: clamp(20px, 4vw, 50px);
+  .classic-sep, .flip-sep {
+    font-family: var(--digits);
+    font-weight: 400;
+    color: rgba(255,255,255,0.2);
     animation: blink 1s ease-in-out infinite;
   }
-  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
-  .classic-label {
-    text-align: center;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(14px, 2.5vw, 28px);
-    font-weight: 300;
-    letter-spacing: 0.3em;
-    opacity: 0.5;
-    margin-top: clamp(16px, 3vw, 30px);
-    text-transform: uppercase;
-  }
+  .classic-sep { font-size: 0.7em; padding-bottom: 0.25em; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 
   /* === MINIMAL STYLE === */
-  .style-minimal.style-active { width: 80vw; max-width: 900px; }
+  .style-minimal.style-active { width: auto; }
+  .minimal-inner { display: flex; flex-direction: column; align-items: stretch; }
   .minimal-time {
     font-family: 'Space Mono', monospace;
-    font-size: clamp(60px, 15vw, 200px);
+    font-size: min(15vw, 32vh);
     font-weight: 700;
+    line-height: 1.05;
     text-align: center;
-    letter-spacing: 0.1em;
-    color: #fff;
-    transition: color 0.5s;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
+  .minimal-time.short { font-size: min(21vw, 42vh); }
+  .minimal-time .sep { width: 1ch; } /* monospace colon needs a full cell */
   .minimal-bar-container {
-    width: 100%;
-    height: 4px;
+    height: max(4px, 0.5vh);
     background: rgba(255,255,255,0.08);
-    border-radius: 4px;
-    margin-top: clamp(10px, 2vw, 25px);
+    border-radius: 99px;
+    margin-top: 2.5vh;
     overflow: hidden;
   }
   .minimal-bar {
     height: 100%;
     width: 100%;
-    border-radius: 4px;
-    background: #00ff88;
-    transition: width 0.5s linear, background-color 0.5s;
-    box-shadow: 0 0 10px currentColor;
-  }
-  .minimal-label {
-    text-align: center;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(12px, 2vw, 22px);
-    font-weight: 300;
-    letter-spacing: 0.3em;
-    opacity: 0.4;
-    margin-top: clamp(8px, 1.5vw, 18px);
-    text-transform: uppercase;
+    border-radius: 99px;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
   }
 
   /* === FLIP STYLE === */
@@ -621,669 +545,1038 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: clamp(8px, 2vw, 20px);
+    gap: 0.12em;
+    font-size: min(11.5vw, 30vh);
   }
-  .flip-group {
-    display: flex;
-    gap: clamp(3px, 0.5vw, 6px);
-    position: relative;
-  }
+  .flip-cards.two { font-size: min(17vw, 40vh); }
+  .flip-group { display: flex; gap: 0.06em; position: relative; }
   .flip-card {
-    background: linear-gradient(180deg, #2a2a3e 0%, #1a1a2e 49.9%, #151525 50.1%, #1a1a2e 100%);
-    border-radius: clamp(6px, 1vw, 14px);
-    padding: clamp(10px, 2vw, 25px) clamp(8px, 1.5vw, 20px);
-    min-width: clamp(40px, 8vw, 90px);
-    text-align: center;
-    box-shadow:
-      0 4px 15px rgba(0,0,0,0.5),
-      inset 0 1px 0 rgba(255,255,255,0.05),
-      inset 0 -1px 0 rgba(0,0,0,0.3);
     position: relative;
-    overflow: hidden;
+    width: 0.92em;
+    height: 1.24em;
+    perspective: 4em;
+    font-family: var(--digits);
+    font-weight: 900;
+    line-height: 1.24em;
+    text-align: center;
+    border-radius: 0.09em;
+    box-shadow: 0 0.06em 0.2em rgba(0,0,0,0.6);
   }
+  .fc-half {
+    position: absolute;
+    left: 0; right: 0;
+    height: 50%;
+    overflow: hidden;
+    backface-visibility: hidden;
+  }
+  .fc-half span { position: absolute; left: 0; right: 0; height: 200%; }
+  .fc-top, .fc-flap-top {
+    top: 0;
+    border-radius: 0.09em 0.09em 0 0;
+    background: linear-gradient(180deg, #2c2c42 0%, #20202f 100%);
+  }
+  .fc-bottom, .fc-flap-bottom {
+    bottom: 0;
+    border-radius: 0 0 0.09em 0.09em;
+    background: linear-gradient(180deg, #17172a 0%, #121220 100%);
+  }
+  .fc-bottom span, .fc-flap-bottom span { top: -100%; }
+  .fc-flap-top { transform-origin: 50% 100%; z-index: 2; }
+  .fc-flap-bottom { transform-origin: 50% 0; transform: rotateX(90deg); z-index: 2; }
+  .flip-card.flipping .fc-flap-top { animation: flipTop 0.26s ease-in forwards; }
+  .flip-card.flipping .fc-flap-bottom { animation: flipBottom 0.26s 0.26s ease-out forwards; }
+  @keyframes flipTop { to { transform: rotateX(-90deg); } }
+  @keyframes flipBottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
   .flip-card::after {
     content: '';
     position: absolute;
-    left: 0; right: 0;
-    top: 50%;
-    height: 1px;
-    background: rgba(0,0,0,0.4);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.03);
+    left: 0; right: 0; top: 50%;
+    height: 0.012em;
+    min-height: 1px;
+    background: rgba(0,0,0,0.65);
+    z-index: 3;
   }
-  .flip-digit {
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(40px, 10vw, 110px);
-    font-weight: 900;
-    color: #fff;
-    line-height: 1;
-    transition: color 0.5s;
-  }
-  .flip-sep {
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(30px, 8vw, 90px);
-    font-weight: 300;
-    color: rgba(255,255,255,0.2);
-    padding-bottom: clamp(15px, 3vw, 40px);
-    animation: blink 1s ease-in-out infinite;
-  }
+  .flip-sep { font-size: 0.6em; padding-bottom: 0.1em; }
   .flip-unit {
     position: absolute;
-    bottom: -20px;
+    top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(8px, 1.2vw, 14px);
-    letter-spacing: 0.2em;
-    color: rgba(255,255,255,0.25);
-    text-transform: uppercase;
+    margin-top: 0.35em;
+    font-family: var(--ui);
+    font-size: 0.1em;
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.35);
     white-space: nowrap;
   }
-  .flip-label {
-    text-align: center;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(14px, 2.5vw, 28px);
-    font-weight: 300;
-    letter-spacing: 0.3em;
-    opacity: 0.5;
-    margin-top: clamp(30px, 5vw, 50px);
-    text-transform: uppercase;
-  }
+  .style-flip .t-label { margin-top: 1.3em; }
 
-  /* === SCREEN FLASH FOR SOUNDS === */
-  .screen-flash {
+  /* === CHIPS (clock, connection, audio) === */
+  .chip {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    font-family: var(--ui);
+    font-size: clamp(11px, 0.85vw, 16px);
+    letter-spacing: 0.08em;
+    padding: 0.5em 1em;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.8);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+  }
+  .chip.show { opacity: 1; transform: none; }
+  .chip.dim { opacity: 0.35; }
+  .chip .led { width: 0.6em; height: 0.6em; border-radius: 50%; background: #ff3b5c; box-shadow: 0 0 10px #ff3b5c; animation: warningBlink 1.2s infinite; }
+  .clock-chip {
+    top: 22px; left: 24px;
+    font-family: var(--digits);
+    font-size: clamp(14px, 1.5vw, 28px);
+    letter-spacing: 0.12em;
+    background: rgba(0,0,0,0.3);
+  }
+  .offline-chip { bottom: 26px; right: 24px; }
+  .audio-chip { bottom: 26px; left: 24px; }
+  body.is-preview .audio-chip { display: none; }
+
+  .screen-flash {
+    position: fixed; inset: 0;
     pointer-events: none;
     z-index: 200;
+    background: #fff;
     opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora i { animation: none; }
   }
 </style>
 </head>
-<body class="bg-dark-gradient">
+<body class="phase-idle level-normal glow-neon">
 
-<div class="particles" id="particles"></div>
+<div class="bg-layer visible bg-dark-gradient" id="bgA"></div>
+<div class="bg-layer" id="bgB"></div>
+<div class="aurora" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+<canvas class="fx-canvas" id="dustCanvas"></canvas>
+<div class="vignette"></div>
+<div class="danger-edge"></div>
 
 <div class="timer-container" id="timerContainer">
-  <!-- CYBER style (default) -->
-  <div class="style-cyber style-active" id="styleCyber">
-    <div class="timer-display" id="timerDisplay">00:00:00</div>
-    <div class="timer-label" id="timerLabel"></div>
-  </div>
+  <div class="pulse-wrap">
+    <!-- CYBER style (default) -->
+    <div class="style-pane style-cyber style-active" id="styleCyber">
+      <div class="timer-display glowable short" id="timerDisplay"></div>
+      <div class="t-label"></div>
+    </div>
 
-  <!-- RING style - circular countdown -->
-  <div class="style-ring" id="styleRing">
-    <div class="ring-wrapper">
-      <svg class="ring-svg" viewBox="0 0 400 400">
-        <defs>
-          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" id="ringGradStop1" stop-color="#00ff88"/>
-            <stop offset="100%" id="ringGradStop2" stop-color="#00cc66"/>
-          </linearGradient>
-        </defs>
-        <circle class="ring-bg" cx="200" cy="200" r="175" />
-        <circle class="ring-bg-outer" cx="200" cy="200" r="192" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="6" style="display:none" />
-        <circle class="ring-progress" id="ringProgress" cx="200" cy="200" r="175"
-          stroke-dasharray="1099.56" stroke-dashoffset="0" />
-        <circle class="ring-progress-outer" id="ringProgressOuter" cx="200" cy="200" r="192"
-          fill="none" stroke="url(#ringGrad)" stroke-width="6" stroke-linecap="round"
-          stroke-dasharray="1206.37" stroke-dashoffset="0" opacity="0.4" style="display:none"
-          filter="drop-shadow(0 0 6px rgba(0,255,136,0.3))" />
-        <!-- tick marks -->
-        <g class="ring-ticks" id="ringTicks"></g>
-      </svg>
-      <div class="ring-inner">
-        <div class="ring-time" id="ringTime">00:00:00</div>
-        <div class="ring-label" id="ringLabel"></div>
+    <!-- RING style - circular countdown -->
+    <div class="style-pane style-ring" id="styleRing">
+      <div class="ring-wrapper" id="ringWrapper">
+        <svg class="ring-svg" viewBox="0 0 400 400">
+          <circle class="ring-bg" cx="200" cy="200" r="175" />
+          <circle class="ring-bg-outer" id="ringBgOuter" cx="200" cy="200" r="192" hidden />
+          <circle class="ring-progress" id="ringProgress" cx="200" cy="200" r="175" stroke-dasharray="1099.56" stroke-dashoffset="0" />
+          <circle class="ring-progress-outer" id="ringProgressOuter" cx="200" cy="200" r="192" stroke-dasharray="1206.37" stroke-dashoffset="0" hidden />
+          <g class="ring-ticks" id="ringTicks"></g>
+          <circle class="ring-tip" id="ringTip" cx="375" cy="200" r="8" />
+        </svg>
+        <div class="ring-inner">
+          <div class="ring-time glowable" id="ringTime"></div>
+          <div class="t-label"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- CLASSIC style - elegant cards -->
-  <div class="style-classic" id="styleClassic">
-    <div class="classic-cards">
-      <div class="classic-card">
-        <span class="classic-digit" id="classicHours">00</span>
-        <span class="classic-unit">GODZIN</span>
+    <!-- CLASSIC style - glass cards -->
+    <div class="style-pane style-classic" id="styleClassic">
+      <div class="classic-cards" id="classicCards">
+        <div class="classic-card" data-hours>
+          <span class="classic-digit glowable" id="classicHours"></span>
+          <span class="classic-unit">GODZIN</span>
+        </div>
+        <div class="classic-sep" data-hours>:</div>
+        <div class="classic-card">
+          <span class="classic-digit glowable" id="classicMinutes"></span>
+          <span class="classic-unit">MINUT</span>
+        </div>
+        <div class="classic-sep">:</div>
+        <div class="classic-card">
+          <span class="classic-digit glowable" id="classicSeconds"></span>
+          <span class="classic-unit">SEKUND</span>
+        </div>
       </div>
-      <div class="classic-sep">:</div>
-      <div class="classic-card">
-        <span class="classic-digit" id="classicMinutes">00</span>
-        <span class="classic-unit">MINUT</span>
-      </div>
-      <div class="classic-sep">:</div>
-      <div class="classic-card">
-        <span class="classic-digit" id="classicSeconds">00</span>
-        <span class="classic-unit">SEKUND</span>
+      <div class="t-label"></div>
+    </div>
+
+    <!-- MINIMAL style - clean thin -->
+    <div class="style-pane style-minimal" id="styleMinimal">
+      <div class="minimal-inner">
+        <div class="minimal-time glowable short" id="minimalTime"></div>
+        <div class="minimal-bar-container">
+          <div class="minimal-bar" id="minimalBar"></div>
+        </div>
+        <div class="t-label"></div>
       </div>
     </div>
-    <div class="classic-label" id="classicLabel"></div>
-  </div>
 
-  <!-- MINIMAL style - clean thin -->
-  <div class="style-minimal" id="styleMinimal">
-    <div class="minimal-time" id="minimalTime">00:00:00</div>
-    <div class="minimal-bar-container">
-      <div class="minimal-bar" id="minimalBar"></div>
+    <!-- FLIP style - retro flip clock -->
+    <div class="style-pane style-flip" id="styleFlip">
+      <div class="flip-cards" id="flipCards">
+        <div class="flip-group" data-hours><span class="flip-unit">GODZ</span></div>
+        <div class="flip-sep" data-hours>:</div>
+        <div class="flip-group"><span class="flip-unit">MIN</span></div>
+        <div class="flip-sep">:</div>
+        <div class="flip-group"><span class="flip-unit">SEK</span></div>
+      </div>
+      <div class="t-label"></div>
     </div>
-    <div class="minimal-label" id="minimalLabel"></div>
-  </div>
-
-  <!-- FLIP style - retro flip clock -->
-  <div class="style-flip" id="styleFlip">
-    <div class="flip-cards">
-      <div class="flip-group">
-        <div class="flip-card"><span class="flip-digit" id="flipH1">0</span></div>
-        <div class="flip-card"><span class="flip-digit" id="flipH2">0</span></div>
-        <span class="flip-unit">GODZ</span>
-      </div>
-      <div class="flip-sep">:</div>
-      <div class="flip-group">
-        <div class="flip-card"><span class="flip-digit" id="flipM1">0</span></div>
-        <div class="flip-card"><span class="flip-digit" id="flipM2">0</span></div>
-        <span class="flip-unit">MIN</span>
-      </div>
-      <div class="flip-sep">:</div>
-      <div class="flip-group">
-        <div class="flip-card"><span class="flip-digit" id="flipS1">0</span></div>
-        <div class="flip-card"><span class="flip-digit" id="flipS2">0</span></div>
-        <span class="flip-unit">SEK</span>
-      </div>
-    </div>
-    <div class="flip-label" id="flipLabel"></div>
   </div>
 </div>
 
-<div class="timer-bar-container">
-  <div class="timer-bar" id="timerBar" style="width:100%"></div>
+<div class="final-count" aria-hidden="true">
+  <div class="final-wave" id="finalWave"></div>
+  <div class="final-num" id="finalNum"></div>
 </div>
 
-<div class="warning-label" id="warningLabel">CZAS SIE KONCZY</div>
+<div class="timer-bar-container" id="timerBarContainer">
+  <div class="timer-bar" id="timerBar"></div>
+</div>
+
+<div class="warning-label" id="warningLabel"><span class="dot"></span><span id="warningText"></span></div>
+
+<img class="overlay-image" id="overlayImage" alt="" hidden>
+
+<div class="announcement" id="announcement" hidden>
+  <div class="ann-card" id="annCard"><span id="annText"></span><div class="ann-progress" id="annProgress"></div></div>
+</div>
 
 <div class="finish-overlay" id="finishOverlay">
-  <div class="finish-message" id="finishMessage">CZAS MINAL!</div>
-  <img class="finish-image" id="finishImage" src="" alt="">
+  <div class="finish-message" id="finishMessage"></div>
+  <img class="finish-image" id="finishImage" alt="">
 </div>
 
-<div class="announcement-bar" id="announcementBar"></div>
+<canvas class="fx-canvas" id="fireCanvas"></canvas>
 
-<img class="overlay-image" id="overlayImage" src="" alt="">
+<div class="chip clock-chip" id="clockChip"></div>
+<div class="chip offline-chip" id="offlineChip"><span class="led"></span>Brak połączenia z serwerem — odliczanie trwa</div>
+<div class="chip audio-chip" id="audioChip">Kliknij ekran, aby włączyć dźwięk i pełny ekran</div>
 
 <div class="screen-flash" id="screenFlash"></div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
 <script>
+(() => {
+  'use strict';
+
+  const PREVIEW = new URLSearchParams(location.search).has('preview');
+  const NON_ASCII = /[^\x00-\x7F]/;
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 175;
+  const RING_OUTER_CIRCUMFERENCE = 2 * Math.PI * 192;
+  const { computeTimer, formatTime, pad } = TimerCore;
+
+  const $ = (id) => document.getElementById(id);
+  const root = document.documentElement;
+  const body = document.body;
+  if (PREVIEW) body.classList.add('is-preview');
+
   const socket = io();
-  socket.emit('register', 'display');
+  const clock = TimerCore.createClock(socket);
 
-  let currentState = {};
-  let announcementTimeout = null;
-  let warningPlayed = false;
-  let dangerPlayed = false;
-  let finishPlayed = false;
-  let finishImageTimeout = null;
-  let finishPhase = 0; // 0=not finished, 1=showing message, 2=showing image
+  let st = null;
+  const memo = new Map();
+  const changed = (key, value) => {
+    if (memo.get(key) === value) return false;
+    memo.set(key, value);
+    return true;
+  };
 
-  // Audio context for sounds
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  let audioCtx = null;
-
-  function getAudioCtx() {
-    if (!audioCtx) audioCtx = new AudioCtx();
-    return audioCtx;
+  function setClassGroup(prefix, value) {
+    body.classList.forEach((c) => { if (c.startsWith(prefix)) body.classList.remove(c); });
+    body.classList.add(prefix + value);
   }
 
-  function playBeep(freq, duration, type = 'sine', volume = 0.3) {
-    try {
-      const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(volume, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-    } catch(e) {}
-  }
+  // ============================================================
+  //  Sound (Web Audio, scheduled on the audio clock)
+  // ============================================================
+  const Sound = (() => {
+    let ctx = null;
+    let master = null;
 
-  function playWarningSound() {
-    playBeep(800, 0.3, 'square', 0.2);
-    setTimeout(() => playBeep(600, 0.3, 'square', 0.2), 350);
-    setTimeout(() => playBeep(800, 0.3, 'square', 0.2), 700);
-  }
-
-  function playFinishSound() {
-    const freqs = [523, 659, 784, 1047, 784, 659, 523];
-    freqs.forEach((f, i) => {
-      setTimeout(() => playBeep(f, 0.4, 'square', 0.3), i * 200);
-    });
-    // Also a big alarm
-    setTimeout(() => {
-      for (let i = 0; i < 6; i++) {
-        setTimeout(() => playBeep(880, 0.15, 'sawtooth', 0.4), i * 250);
-        setTimeout(() => playBeep(440, 0.15, 'sawtooth', 0.4), i * 250 + 125);
+    function ensure() {
+      if (PREVIEW) return null;
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+        const comp = ctx.createDynamicsCompressor();
+        master = ctx.createGain();
+        master.gain.value = 0.9;
+        master.connect(comp);
+        comp.connect(ctx.destination);
       }
-    }, 1500);
-  }
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    }
 
-  function playTickSound() {
-    playBeep(1200, 0.05, 'sine', 0.1);
-  }
+    function beep(freq, duration, type = 'sine', volume = 0.3, when = 0) {
+      const c = ensure();
+      if (!c || c.state !== 'running') return;
+      const t0 = c.currentTime + when;
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(volume, t0 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.05);
+    }
 
-  // Generate ring tick marks (lines + dots for variant switching)
-  (function() {
-    const ticks = document.getElementById('ringTicks');
+    return {
+      unlock: ensure,
+      get unlocked() { return !!ctx && ctx.state === 'running'; },
+      warning() {
+        beep(800, 0.3, 'square', 0.2);
+        beep(600, 0.3, 'square', 0.2, 0.35);
+        beep(800, 0.3, 'square', 0.2, 0.7);
+      },
+      tick(n) {
+        beep(n === 1 ? 1760 : 1200, n === 1 ? 0.14 : 0.06, 'sine', n <= 3 ? 0.2 : 0.1);
+      },
+      finish() {
+        [523, 659, 784, 1047, 784, 659, 523].forEach((f, i) => beep(f, 0.4, 'square', 0.3, i * 0.2));
+        for (let i = 0; i < 6; i++) {
+          beep(880, 0.15, 'sawtooth', 0.4, 1.5 + i * 0.25);
+          beep(440, 0.15, 'sawtooth', 0.4, 1.5 + i * 0.25 + 0.125);
+        }
+      },
+      test() {
+        [660, 880, 1320].forEach((f, i) => beep(f, 0.2, 'sine', 0.25, i * 0.15));
+      },
+    };
+  })();
+
+  // ============================================================
+  //  Floating dust (canvas)
+  // ============================================================
+  const Dust = (() => {
+    const canvas = $('dustCanvas');
+    const ctx = canvas.getContext('2d');
+    const count = PREVIEW ? 26 : 70;
+    const parts = [];
+    let W = 0, H = 0;
+    let speed = 1, targetSpeed = 1;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, PREVIEW ? 1 : 2);
+      W = innerWidth; H = innerHeight;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function spawn(p, anywhere) {
+      p.x = Math.random() * W;
+      p.y = anywhere ? Math.random() * H : H + 10;
+      p.r = 0.6 + Math.random() * 2.2;
+      p.vy = 8 + Math.random() * 26;
+      p.amp = 6 + Math.random() * 20;
+      p.freq = 0.2 + Math.random() * 0.6;
+      p.phase = Math.random() * Math.PI * 2;
+      p.alpha = 0.15 + Math.random() * 0.45;
+      p.tinted = Math.random() < 0.35;
+      return p;
+    }
+
+    resize();
+    addEventListener('resize', resize);
+    for (let i = 0; i < count; i++) parts.push(spawn({}, true));
+
+    return {
+      mood(t) {
+        targetSpeed = t.phase === 'paused' ? 0.12 : t.phase === 'finished' ? 0.4
+          : t.level === 'danger' ? 2.8 : t.level === 'warning' ? 1.6 : 1;
+      },
+      step(dt, time, accent) {
+        speed += (targetSpeed - speed) * Math.min(1, dt * 2);
+        ctx.clearRect(0, 0, W, H);
+        for (const p of parts) {
+          p.y -= p.vy * dt * speed;
+          if (p.y < -10) spawn(p, false);
+          const x = p.x + Math.sin(time * p.freq + p.phase) * p.amp;
+          ctx.globalAlpha = p.alpha * (0.55 + 0.45 * Math.sin(time * p.freq * 3 + p.phase));
+          ctx.fillStyle = p.tinted ? accent : '#ffffff';
+          ctx.beginPath();
+          ctx.arc(x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      },
+    };
+  })();
+
+  // ============================================================
+  //  Fireworks (canvas)
+  // ============================================================
+  const Fireworks = (() => {
+    const canvas = $('fireCanvas');
+    const ctx = canvas.getContext('2d');
+    const rockets = [];
+    const sparks = [];
+    let W = 0, H = 0;
+    let until = 0, nextLaunch = 0, active = false;
+    const colors = ['#ffffff', '#ffd166', '#4cc9f0', '#f72585', '#7cff6b', '#b388ff'];
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, PREVIEW ? 1 : 2);
+      W = innerWidth; H = innerHeight;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    addEventListener('resize', resize);
+
+    function launch(accent) {
+      rockets.push({
+        x: W * (0.12 + Math.random() * 0.76),
+        y: H + 10,
+        vx: (Math.random() - 0.5) * W * 0.05,
+        vy: -H * (1.05 + Math.random() * 0.3),
+        color: Math.random() < 0.45 ? accent : colors[(Math.random() * colors.length) | 0],
+      });
+    }
+
+    function explode(r) {
+      const n = PREVIEW ? 45 : 90 + ((Math.random() * 60) | 0);
+      const power = H * (0.2 + Math.random() * 0.18);
+      const ring = Math.random() < 0.3;
+      for (let i = 0; i < n; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const v = ring ? power : power * (0.2 + Math.random() * 0.8);
+        sparks.push({
+          x: r.x, y: r.y,
+          vx: Math.cos(angle) * v,
+          vy: Math.sin(angle) * v,
+          age: 0,
+          life: 1 + Math.random() * 0.9,
+          size: 1.4 + Math.random() * 2,
+          color: Math.random() < 0.18 ? '#ffffff' : r.color,
+        });
+      }
+    }
+
+    return {
+      start(ms) {
+        until = Math.max(until, performance.now() + ms);
+        active = true;
+      },
+      step(dt, now, accent) {
+        if (!active) return;
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0,0,0,0.24)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'lighter';
+
+        if (now < until && now >= nextLaunch) {
+          launch(accent);
+          if (Math.random() < 0.4) launch(accent);
+          nextLaunch = now + 220 + Math.random() * 480;
+        }
+
+        const gravity = H * 0.9;
+        for (let i = rockets.length - 1; i >= 0; i--) {
+          const r = rockets[i];
+          r.vy += gravity * dt;
+          r.x += r.vx * dt;
+          r.y += r.vy * dt;
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = r.color;
+          ctx.fillRect(r.x - 1.5, r.y - 1.5, 3, 3);
+          if (r.vy > -H * 0.08) {
+            explode(r);
+            rockets.splice(i, 1);
+          }
+        }
+
+        const drag = Math.pow(0.15, dt);
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const s = sparks[i];
+          s.age += dt;
+          if (s.age >= s.life) { sparks.splice(i, 1); continue; }
+          s.vx *= drag;
+          s.vy = s.vy * drag + H * 0.3 * dt;
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+          const fade = 1 - s.age / s.life;
+          ctx.globalAlpha = fade * (0.7 + Math.random() * 0.3);
+          ctx.fillStyle = s.color;
+          ctx.fillRect(s.x, s.y, s.size * fade + 0.5, s.size * fade + 0.5);
+        }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+
+        if (now >= until && !rockets.length && !sparks.length) {
+          active = false;
+          ctx.clearRect(0, 0, W, H);
+        }
+      },
+    };
+  })();
+
+  // ============================================================
+  //  Timer styles
+  // ============================================================
+  const PANES = { cyber: 'styleCyber', ring: 'styleRing', classic: 'styleClassic', minimal: 'styleMinimal', flip: 'styleFlip' };
+  let activeStyle = 'cyber';
+
+  // Ring tick marks (lines + dots for the "dots" variant)
+  (function buildRingTicks() {
+    const ticks = $('ringTicks');
+    const NS = 'http://www.w3.org/2000/svg';
     for (let i = 0; i < 60; i++) {
       const angle = (i * 6) * Math.PI / 180;
-      const isMajor = i % 5 === 0;
-      const r1 = isMajor ? 155 : 160;
-      const r2 = 168;
-      const x1 = 200 + r1 * Math.cos(angle);
-      const y1 = 200 + r1 * Math.sin(angle);
-      const x2 = 200 + r2 * Math.cos(angle);
-      const y2 = 200 + r2 * Math.sin(angle);
-      // Line tick
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-      if (isMajor) line.classList.add('major');
+      const major = i % 5 === 0;
+      const r1 = major ? 155 : 160;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', 200 + r1 * Math.cos(angle));
+      line.setAttribute('y1', 200 + r1 * Math.sin(angle));
+      line.setAttribute('x2', 200 + 168 * Math.cos(angle));
+      line.setAttribute('y2', 200 + 168 * Math.sin(angle));
+      if (major) line.classList.add('major');
       ticks.appendChild(line);
-      // Dot tick (for dots variant)
-      const dotR = 164;
-      const cx = 200 + dotR * Math.cos(angle);
-      const cy = 200 + dotR * Math.sin(angle);
-      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
-      dot.setAttribute('r', isMajor ? 3 : 1.5);
-      dot.classList.add('dot-tick');
-      if (isMajor) dot.classList.add('major');
-      dot.style.display = 'none';
+      const dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('cx', 200 + 164 * Math.cos(angle));
+      dot.setAttribute('cy', 200 + 164 * Math.sin(angle));
+      dot.setAttribute('r', major ? 3 : 1.5);
+      if (major) dot.classList.add('major');
       ticks.appendChild(dot);
     }
   })();
 
-  const RING_CIRCUMFERENCE = 2 * Math.PI * 175; // ~1099.56
-  const RING_OUTER_CIRCUMFERENCE = 2 * Math.PI * 192;
-
   function applyRingVariant(variant) {
-    const wrapper = document.getElementById('styleRing');
-    // Remove all variant classes
-    wrapper.className = wrapper.className.replace(/ring-variant-\S+/g, '').trim();
-    if (variant && variant !== 'classic') {
-      wrapper.classList.add('ring-variant-' + variant);
+    const wrapper = $('ringWrapper');
+    wrapper.className = 'ring-wrapper' + (variant && variant !== 'classic' ? ' ring-variant-' + variant : '');
+    const dots = variant === 'dots';
+    $('ringTicks').querySelectorAll('line').forEach((l) => { l.style.display = dots ? 'none' : ''; });
+    $('ringTicks').querySelectorAll('circle').forEach((c) => { c.style.display = dots ? '' : 'none'; });
+    $('ringBgOuter').hidden = variant !== 'double';
+    $('ringProgressOuter').hidden = variant !== 'double';
+  }
+
+  // Flip cards: built once, 6 digits
+  const flipCards = [];
+  $('flipCards').querySelectorAll('.flip-group').forEach((group) => {
+    for (let i = 0; i < 2; i++) {
+      const card = document.createElement('div');
+      card.className = 'flip-card';
+      card.dataset.v = '0';
+      card.innerHTML = ['fc-top', 'fc-bottom', 'fc-flap-top', 'fc-flap-bottom']
+        .map((c) => `<div class="fc-half ${c}"><span class="glowable">0</span></div>`).join('');
+      group.insertBefore(card, group.querySelector('.flip-unit'));
+      flipCards.push(card);
     }
-    // Toggle dot visibility
-    const dots = document.querySelectorAll('.dot-tick');
-    const lines = document.querySelectorAll('#ringTicks line');
-    if (variant === 'dots') {
-      dots.forEach(d => d.style.display = '');
-      lines.forEach(l => l.style.display = 'none');
-    } else {
-      dots.forEach(d => d.style.display = 'none');
-      lines.forEach(l => l.style.display = '');
+  });
+
+  function setFlip(card, value) {
+    if (card.dataset.v === value) return;
+    const old = card.dataset.v;
+    card.dataset.v = value;
+    const [top, bottom, flapTop, flapBottom] = card.querySelectorAll('span');
+    top.textContent = value;
+    bottom.textContent = old;
+    flapTop.textContent = old;
+    flapBottom.textContent = value;
+    card.classList.remove('flipping');
+    void card.offsetWidth;
+    card.classList.add('flipping');
+    clearTimeout(card._done);
+    card._done = setTimeout(() => {
+      bottom.textContent = value;
+      flapTop.textContent = value;
+      card.classList.remove('flipping');
+    }, 560);
+  }
+
+  const DIGIT_IN = [
+    { transform: 'translateY(-14%)', opacity: 0.25 },
+    { transform: 'none', opacity: 1 },
+  ];
+
+  // Renders "12:34" as fixed-width character spans; only changed characters animate
+  function renderChars(el, text, animate) {
+    const prev = el._text || '';
+    if (prev === text) return;
+    el._text = text;
+    if (prev.length !== text.length) {
+      el.innerHTML = [...text].map((c) => (c === ':' ? '<span class="sep">:</span>' : `<span class="ch">${c}</span>`)).join('');
+      return;
     }
-    // Double ring
-    const outerBg = document.querySelector('.ring-bg-outer');
-    const outerProgress = document.querySelector('.ring-progress-outer');
-    if (variant === 'double') {
-      outerBg.style.display = '';
-      outerProgress.style.display = '';
-    } else {
-      outerBg.style.display = 'none';
-      outerProgress.style.display = 'none';
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === prev[i]) continue;
+      const span = el.children[i];
+      span.textContent = text[i];
+      if (animate) span.animate(DIGIT_IN, { duration: 320, easing: 'cubic-bezier(.2,.9,.3,1)' });
     }
-    // Reset ring progress to clean state
-    const progress = document.getElementById('ringProgress');
-    progress.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE);
-    progress.style.strokeDashoffset = '0';
-    progress.style.strokeLinecap = 'round';
+  }
+
+  function renderTime(t, animate) {
+    const text = formatTime(t.remaining);
+    const showHours = t.h > 0 || (t.phase !== 'idle' && t.duration >= 3600000);
+    switch (activeStyle) {
+      case 'ring':
+        renderChars($('ringTime'), text, animate);
+        $('ringTime').classList.toggle('long', text.length > 5);
+        break;
+      case 'classic':
+        $('classicCards').classList.toggle('two', !showHours);
+        $('classicCards').querySelectorAll('[data-hours]').forEach((el) => { el.hidden = !showHours; });
+        renderChars($('classicHours'), pad(t.h), animate);
+        renderChars($('classicMinutes'), pad(t.m), animate);
+        renderChars($('classicSeconds'), pad(t.s), animate);
+        break;
+      case 'minimal':
+        renderChars($('minimalTime'), text, animate);
+        $('minimalTime').classList.toggle('short', text.length <= 5);
+        break;
+      case 'flip': {
+        $('flipCards').classList.toggle('two', !showHours);
+        $('flipCards').querySelectorAll('[data-hours]').forEach((el) => { el.hidden = !showHours; });
+        const digits = pad(t.h) + pad(t.m) + pad(t.s);
+        flipCards.forEach((card, i) => setFlip(card, digits[i]));
+        break;
+      }
+      default:
+        renderChars($('timerDisplay'), text, animate);
+        $('timerDisplay').classList.toggle('short', text.length <= 5);
+    }
   }
 
   function switchTimerStyle(style) {
-    ['styleCyber','styleRing','styleClassic','styleMinimal','styleFlip'].forEach(id => {
-      document.getElementById(id).classList.remove('style-active');
-    });
-    const map = { cyber:'styleCyber', ring:'styleRing', classic:'styleClassic', minimal:'styleMinimal', flip:'styleFlip' };
-    const el = document.getElementById(map[style] || 'styleCyber');
-    if (el) el.classList.add('style-active');
+    activeStyle = PANES[style] ? style : 'cyber';
+    Object.entries(PANES).forEach(([name, id]) => $(id).classList.toggle('style-active', name === activeStyle));
+    view.text = null; // force re-render in the new style
+    view.progressKey = null;
   }
 
-  function pad(n) { return String(n).padStart(2, '0'); }
-
-  function updateAllTimerStyles(timeStr, h, m, s, progress, color) {
-    // Cyber
-    document.getElementById('timerDisplay').textContent = timeStr;
-    document.getElementById('timerDisplay').style.color = color;
-
-    // Ring
-    document.getElementById('ringTime').textContent = timeStr;
-    document.getElementById('ringTime').style.color = color;
-    const currentVariant = (window._currentState && window._currentState.ringVariant) || 'classic';
-    const ringOffset = RING_CIRCUMFERENCE * (1 - progress);
-    document.getElementById('ringProgress').style.strokeDashoffset = ringOffset;
-    document.getElementById('ringGradStop1').setAttribute('stop-color', color);
-    document.getElementById('ringGradStop2').setAttribute('stop-color', color);
-    if (currentVariant === 'glow-ring') {
-      document.getElementById('ringProgress').style.filter = `drop-shadow(0 0 15px ${color}) drop-shadow(0 0 35px ${color}) drop-shadow(0 0 60px ${color})`;
-    } else {
-      document.getElementById('ringProgress').style.filter = `drop-shadow(0 0 12px ${color})`;
-    }
-    // Double ring outer
-    if (currentVariant === 'double') {
-      const outerOffset = RING_OUTER_CIRCUMFERENCE * (1 - progress);
-      document.getElementById('ringProgressOuter').style.strokeDashoffset = outerOffset;
-    }
-
-    // Classic
-    document.getElementById('classicHours').textContent = pad(h);
-    document.getElementById('classicMinutes').textContent = pad(m);
-    document.getElementById('classicSeconds').textContent = pad(s);
-    document.querySelectorAll('.classic-digit').forEach(el => {
-      el.style.background = `linear-gradient(180deg, ${color}, ${color}99)`;
-      el.style.webkitBackgroundClip = 'text';
-      el.style.webkitTextFillColor = 'transparent';
-    });
-    document.querySelectorAll('.classic-card').forEach(el => {
-      el.style.borderColor = color + '20';
-      el.style.boxShadow = `0 0 30px ${color}10`;
-    });
-
-    // Minimal
-    document.getElementById('minimalTime').textContent = timeStr;
-    document.getElementById('minimalTime').style.color = color;
-    document.getElementById('minimalBar').style.width = (progress * 100) + '%';
-    document.getElementById('minimalBar').style.backgroundColor = color;
-
-    // Flip
-    const hStr = pad(h), mStr = pad(m), sStr = pad(s);
-    document.getElementById('flipH1').textContent = hStr[0];
-    document.getElementById('flipH2').textContent = hStr[1];
-    document.getElementById('flipM1').textContent = mStr[0];
-    document.getElementById('flipM2').textContent = mStr[1];
-    document.getElementById('flipS1').textContent = sStr[0];
-    document.getElementById('flipS2').textContent = sStr[1];
-    document.querySelectorAll('.flip-digit').forEach(el => el.style.color = color);
-  }
-
-  function setAllLabels(text) {
-    const st = currentState;
-    const font = st.labelFont || 'Rajdhani';
-    const sizeScale = (st.labelSize || 100) / 100;
-    const transform = st.labelUppercase !== false ? 'uppercase' : 'none';
-    const labelColor = st.labelColor || '#ffffff';
-    ['timerLabel','ringLabel','classicLabel','minimalLabel','flipLabel'].forEach(id => {
-      const el = document.getElementById(id);
-      el.textContent = text;
-      el.style.fontFamily = `'${font}', sans-serif`;
-      el.style.transform = `scale(${sizeScale})`;
-      el.style.textTransform = transform;
-      el.style.color = labelColor;
-    });
-  }
-
-  function createParticles() {
-    const container = document.getElementById('particles');
-    container.innerHTML = '';
-    for (let i = 0; i < 30; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      const size = Math.random() * 4 + 1;
-      p.style.width = size + 'px';
-      p.style.height = size + 'px';
-      p.style.left = Math.random() * 100 + '%';
-      p.style.animationDuration = (Math.random() * 15 + 10) + 's';
-      p.style.animationDelay = (Math.random() * 15) + 's';
-      container.appendChild(p);
+  function setProgress(p) {
+    const key = Math.round(p * 5000);
+    if (key === view.progressKey) return;
+    view.progressKey = key;
+    $('timerBar').style.width = (p * 100) + '%';
+    if (activeStyle === 'minimal') $('minimalBar').style.width = (p * 100) + '%';
+    if (activeStyle === 'ring') {
+      $('ringProgress').style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - p);
+      $('ringProgressOuter').style.strokeDashoffset = RING_OUTER_CIRCUMFERENCE * (1 - p);
+      const a = p * Math.PI * 2;
+      $('ringTip').setAttribute('cx', 200 + 175 * Math.cos(a));
+      $('ringTip').setAttribute('cy', 200 + 175 * Math.sin(a));
     }
   }
-  createParticles();
 
-  function formatTime(ms) {
-    if (ms <= 0) return '00:00:00';
-    const totalSec = Math.ceil(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (h > 0) {
-      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  // ============================================================
+  //  Screen elements
+  // ============================================================
+  const bgLayers = [$('bgA'), $('bgB')];
+  let bgFront = 0;
+
+  function applyBackground() {
+    const cls = st.background || 'bg-dark-gradient';
+    const image = cls === 'bg-image' ? st.customBgImage : null;
+    const key = [cls, image, st.customBgColor1, st.customBgColor2].join('|');
+    if (!changed('bg', key)) return;
+    const next = bgLayers[1 - bgFront];
+    const current = bgLayers[bgFront];
+    next.className = 'bg-layer ' + (image || cls !== 'bg-image' ? cls : 'bg-dark-gradient');
+    next.style.setProperty('--custom-bg1', st.customBgColor1 || '#0a0a2e');
+    next.style.setProperty('--custom-bg2', st.customBgColor2 || '#1a1a4e');
+    next.style.backgroundImage = image ? `url("${image}")` : '';
+    next.style.zIndex = 1;
+    current.style.zIndex = 0;
+    void next.offsetWidth;
+    next.classList.add('visible');
+    clearTimeout(applyBackground._t);
+    applyBackground._t = setTimeout(() => current.classList.remove('visible'), 1300);
+    bgFront = 1 - bgFront;
   }
 
-  function updateDisplay() {
-    const st = currentState;
-    const display = document.getElementById('timerDisplay');
-    const bar = document.getElementById('timerBar');
-    const warning = document.getElementById('warningLabel');
-    const finish = document.getElementById('finishOverlay');
-    const finishMsg = document.getElementById('finishMessage');
-    const finishImg = document.getElementById('finishImage');
+  function applyLabelStyle() {
+    const key = [st.labelFont, st.labelSize, st.labelUppercase, st.labelColor].join('|');
+    if (!changed('labelStyle', key)) return;
+    root.style.setProperty('--label-font', `'${st.labelFont || 'Rajdhani'}'`);
+    root.style.setProperty('--label-scale', (st.labelSize || 100) / 100);
+    root.style.setProperty('--label-transform', st.labelUppercase === false ? 'none' : 'uppercase');
+    root.style.setProperty('--label-color', st.labelColor || '#ffffff');
+  }
 
-    // Background + Glow
-    const glowClass = 'glow-' + (st.timerGlowStyle || 'neon');
-    document.body.className = (st.background || 'bg-dark-gradient') + ' ' + glowClass;
-    if (st.background === 'bg-custom') {
-      document.body.style.setProperty('--custom-bg1', st.customBgColor1);
-      document.body.style.setProperty('--custom-bg2', st.customBgColor2);
-      document.body.style.backgroundImage = '';
-    } else if (st.background === 'bg-image' && st.customBgImage) {
-      document.body.style.backgroundImage = `url(${st.customBgImage})`;
-    } else {
-      document.body.style.backgroundImage = '';
+  function setLabelText(text) {
+    if (!changed('labelText', text)) return;
+    document.querySelectorAll('.t-label').forEach((el) => { el.textContent = text; });
+  }
+
+  function applyOverlay() {
+    const key = [st.overlayImage, st.overlayPosition, st.overlaySize].join('|');
+    if (!changed('overlay', key)) return;
+    const img = $('overlayImage');
+    if (!st.overlayImage) { img.hidden = true; return; }
+    img.src = st.overlayImage;
+    img.style.width = (st.overlaySize || 150) + 'px';
+    img.className = 'overlay-image pos-' + (st.overlayPosition || 'top-right');
+    img.hidden = false;
+  }
+
+  let announcementTimer = null;
+  function hideAnnouncement() {
+    clearTimeout(announcementTimer);
+    const wrap = $('announcement');
+    if (wrap.hidden) return;
+    const out = $('annCard').animate(
+      [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(16px) scale(0.97)' }],
+      { duration: 350, easing: 'ease-in', fill: 'forwards' }
+    );
+    out.onfinish = () => { if (!st.announcement) wrap.hidden = true; out.cancel(); };
+  }
+
+  function applyAnnouncement() {
+    const a = st.announcement;
+    if (!changed('announcement', a ? a.id : null)) return;
+    clearTimeout(announcementTimer);
+    if (!a) { hideAnnouncement(); return; }
+
+    const total = (a.duration || 0) * 1000;
+    const elapsed = Math.max(0, clock.now() - a.id);
+    if (total > 0 && elapsed >= total) { hideAnnouncement(); return; }
+
+    const wrap = $('announcement');
+    const card = $('annCard');
+    $('annText').textContent = a.text;
+    card.style.color = a.textColor || '#fff';
+    card.style.backgroundColor = a.bgColor || 'rgba(0,0,0,0.85)';
+    card.style.fontSize = (a.fontSize || 48) + 'px';
+    wrap.className = 'announcement pos-' + (a.position || 'bottom');
+    wrap.hidden = false;
+    card.getAnimations().forEach((anim) => anim.cancel());
+    card.animate(
+      [
+        { opacity: 0, transform: `translateY(${a.position === 'top' ? -40 : 40}px) scale(0.94)`, filter: 'blur(8px)' },
+        { opacity: 1, transform: 'none', filter: 'blur(0)' },
+      ],
+      { duration: 600, easing: 'cubic-bezier(.2,.9,.3,1.2)' }
+    );
+
+    const progress = $('annProgress');
+    progress.getAnimations().forEach((anim) => anim.cancel());
+    progress.hidden = !(total > 0);
+    if (total > 0) {
+      progress.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: total, delay: -elapsed, fill: 'forwards' });
+      announcementTimer = setTimeout(hideAnnouncement, total - elapsed);
     }
+  }
 
-    // Custom glow colors
-    if (st.timerGlowStyle === 'custom') {
-      document.body.style.setProperty('--glow-color1', st.glowColor1 || '#00ff88');
-      document.body.style.setProperty('--glow-color2', st.glowColor2 || '#0088ff');
-    }
+  // ============================================================
+  //  Finish screen
+  // ============================================================
+  let finishImageTimer = null;
 
-    // Timer bar visibility
-    document.querySelector('.timer-bar-container').style.display = st.showTimerBar === false ? 'none' : 'block';
-
-    // Timer display style
-    switchTimerStyle(st.timerDisplayStyle || 'cyber');
-
-    // Ring variant
-    applyRingVariant(st.ringVariant || 'classic');
-
-    // Overlay image
-    const oi = document.getElementById('overlayImage');
-    if (st.overlayImage) {
-      oi.src = st.overlayImage;
-      oi.style.width = (st.overlaySize || 150) + 'px';
-      oi.className = 'overlay-image active pos-' + (st.overlayPosition || 'top-right');
-    } else {
-      oi.className = 'overlay-image';
-    }
-
-    // Timer finished
-    if (st.timerFinished) {
-      finish.classList.add('active');
-
-      if (!finishPlayed) {
-        // Phase 1: show message on black screen
-        finishPhase = 1;
-        finishMsg.textContent = st.finishMessage || 'CZAS MINAL!';
-        finishMsg.classList.remove('hidden');
-        finishImg.classList.remove('active');
-
-        if (st.soundEnabled && st.finishSound) {
-          playFinishSound();
+  function renderFinishMessage(text, animate) {
+    const el = $('finishMessage');
+    el.textContent = '';
+    el.classList.toggle('ext', NON_ASCII.test(text));
+    let index = 0;
+    text.split(/(\s+)/).forEach((part) => {
+      if (!part) return;
+      if (/^\s+$/.test(part)) { el.appendChild(document.createTextNode(' ')); return; }
+      const word = document.createElement('span');
+      word.className = 'word';
+      for (const ch of part) {
+        const letter = document.createElement('span');
+        letter.className = 'letter';
+        letter.textContent = ch;
+        word.appendChild(letter);
+        if (animate) {
+          letter.animate(
+            [
+              { opacity: 0, transform: 'translateY(0.45em) scale(0.6)', filter: 'blur(12px)' },
+              { opacity: 1, transform: 'none', filter: 'blur(0)' },
+            ],
+            { duration: 750, delay: 120 + index * 55, easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'backwards' }
+          );
         }
-        finishPlayed = true;
-
-        // After 5 seconds, transition to fullscreen image if available
-        if (finishImageTimeout) clearTimeout(finishImageTimeout);
-        if (st.finishImage) {
-          finishImageTimeout = setTimeout(() => {
-            finishPhase = 2;
-            finishMsg.classList.add('hidden');
-            finishImg.src = st.finishImage;
-            finishImg.classList.add('active');
-          }, 5000);
-        }
+        index++;
       }
-      return;
-    } else {
-      finish.classList.remove('active');
-      finishMsg.classList.remove('hidden');
-      finishImg.classList.remove('active');
-      if (finishImageTimeout) { clearTimeout(finishImageTimeout); finishImageTimeout = null; }
-      finishPhase = 0;
-    }
-
-    if (!st.timerRunning) {
-      const defaultColor = st.timerColor || '#00ff88';
-      display.className = 'timer-display';
-      warning.style.display = 'none';
-      if (!st.timerEndTime) {
-        updateAllTimerStyles('00:00:00', 0, 0, 0, 1, defaultColor);
-        bar.style.width = '100%';
-        bar.style.backgroundColor = defaultColor;
-      }
-      setAllLabels(st.timerPaused ? (st.pauseMessage || '⏸ PAUZA') : (st.timerLabel || ''));
-      finishPlayed = false;
-      warningPlayed = false;
-      dangerPlayed = false;
-      return;
-    }
-
-    let remaining;
-    if (st.timerPaused) {
-      remaining = st.timerPausedRemaining;
-    } else {
-      remaining = new Date(st.timerEndTime) - Date.now();
-    }
-
-    if (remaining <= 0) {
-      remaining = 0;
-      updateAllTimerStyles('00:00:00', 0, 0, 0, 0, st.timerDangerColor || '#ff0040');
-      bar.style.width = '0%';
-      socket.emit('timer-finished');
-      return;
-    }
-
-    const totalSec = remaining / 1000;
-    const progressRatio = st.timerDuration > 0 ? (remaining / st.timerDuration) : 1;
-    const progressPct = progressRatio * 100;
-
-    // Parsed time
-    const ceilSec = Math.ceil(totalSec);
-    const h = Math.floor(ceilSec / 3600);
-    const m = Math.floor((ceilSec % 3600) / 60);
-    const s = ceilSec % 60;
-    const timeStr = formatTime(remaining);
-
-    // Color based on time remaining
-    let color = st.timerColor || '#00ff88';
-    if (totalSec <= (st.dangerThreshold || 60)) {
-      color = st.timerDangerColor || '#ff0040';
-      display.className = 'timer-display danger-flash';
-      warning.style.display = 'block';
-      warning.textContent = st.dangerMessage || 'OSTATNIE SEKUNDY';
-      warning.style.color = color;
-      warning.style.borderColor = color;
-      warning.style.background = 'rgba(255,0,0,0.15)';
-      if (!dangerPlayed && st.soundEnabled && st.warningSound) {
-        playWarningSound();
-        dangerPlayed = true;
-      }
-      if (totalSec <= 10 && st.soundEnabled && st.tickSound) {
-        playTickSound();
-      }
-    } else if (totalSec <= (st.warningThreshold || 300)) {
-      color = st.timerWarningColor || '#ff6b35';
-      display.className = 'timer-display warning-pulse';
-      warning.style.display = 'block';
-      warning.textContent = st.warningMessage || 'CZAS SIE KONCZY';
-      warning.style.color = color;
-      warning.style.borderColor = color;
-      warning.style.background = 'rgba(255,107,53,0.1)';
-      if (!warningPlayed && st.soundEnabled && st.warningSound) {
-        playWarningSound();
-        warningPlayed = true;
-      }
-    } else {
-      display.className = 'timer-display';
-      warning.style.display = 'none';
-    }
-
-    // Update ALL timer styles
-    updateAllTimerStyles(timeStr, h, m, s, progressRatio, color);
-    bar.style.width = progressPct + '%';
-    bar.style.backgroundColor = color;
-
-    setAllLabels(st.timerPaused ? (st.pauseMessage || '⏸ PAUZA') : (st.timerLabel || ''));
+      el.appendChild(word);
+    });
   }
 
-  function updateAnnouncement() {
-    const bar = document.getElementById('announcementBar');
-    const st = currentState;
+  function showFinishImage(show) {
+    $('finishMessage').classList.toggle('hidden', show);
+    $('finishImage').classList.toggle('active', show);
+    $('finishOverlay').classList.toggle('show-image', show);
+  }
 
-    if (st.announcement) {
-      bar.textContent = st.announcement.text;
-      bar.style.color = st.announcement.textColor || '#fff';
-      bar.style.backgroundColor = st.announcement.bgColor || 'rgba(0,0,0,0.85)';
-      bar.style.fontSize = (st.announcement.fontSize || 48) + 'px';
-      bar.className = 'announcement-bar active pos-' + (st.announcement.position || 'bottom');
+  function scheduleFinishImage(delay) {
+    clearTimeout(finishImageTimer);
+    if (!st.finishImage) { showFinishImage(false); return; }
+    $('finishImage').src = st.finishImage;
+    finishImageTimer = setTimeout(() => showFinishImage(true), Math.max(0, delay));
+  }
 
-      if (announcementTimeout) clearTimeout(announcementTimeout);
-      if (st.announcement.duration > 0) {
-        announcementTimeout = setTimeout(() => {
-          bar.classList.remove('active');
-        }, st.announcement.duration * 1000);
-      }
-    } else {
-      bar.classList.remove('active');
+  function showFinish() {
+    const sinceFinish = st.timerFinishedAt ? clock.now() - st.timerFinishedAt : 0;
+    const fresh = sinceFinish < 15000;
+    $('finishOverlay').classList.add('active');
+    showFinishImage(false);
+    renderFinishMessage(st.finishMessage || 'CZAS MINĄŁ!', fresh);
+    memo.set('finishMessage', st.finishMessage);
+    memo.set('finishImage', st.finishImage);
+    if (fresh) {
+      $('screenFlash').animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 900, easing: 'ease-out' });
+      if (st.soundEnabled !== false && st.finishSound !== false) Sound.finish();
+      if (st.celebration !== false) Fireworks.start(6500);
+    }
+    scheduleFinishImage(5000 - sinceFinish);
+  }
+
+  function hideFinish() {
+    clearTimeout(finishImageTimer);
+    $('finishOverlay').classList.remove('active');
+    showFinishImage(false);
+  }
+
+  function applyFinishContent() {
+    if (view.phase !== 'finished') return;
+    if (changed('finishMessage', st.finishMessage)) renderFinishMessage(st.finishMessage || 'CZAS MINĄŁ!', true);
+    if (changed('finishImage', st.finishImage)) scheduleFinishImage(0);
+  }
+
+  // ============================================================
+  //  Main loop
+  // ============================================================
+  const view = { phase: null, level: null, color: null, text: null, progressKey: null, final: false, finalNum: null, primed: false };
+  const played = { warning: false, danger: false, tick: null };
+
+  function showFinalNumber(n) {
+    $('finalNum').textContent = n;
+    $('finalNum').animate(
+      [
+        { transform: 'scale(1.9)', opacity: 0 },
+        { transform: 'scale(1)', opacity: 1, offset: 0.22 },
+        { transform: 'scale(0.94)', opacity: 1, offset: 0.7 },
+        { transform: 'scale(0.72)', opacity: 0 },
+      ],
+      { duration: 1000, easing: 'ease-out', fill: 'both' }
+    );
+    $('finalWave').animate(
+      [{ transform: 'scale(0.5)', opacity: 0.9 }, { transform: 'scale(2.8)', opacity: 0 }],
+      { duration: 950, easing: 'cubic-bezier(.1,.7,.3,1)' }
+    );
+  }
+
+  function playSounds(t) {
+    if (!view.primed) {
+      // no alarms just because the projector page was refreshed
+      played.warning = t.level !== 'normal';
+      played.danger = t.level === 'danger';
+      played.tick = t.total;
+      view.primed = true;
+      return;
+    }
+    if (t.phase !== 'running') {
+      if (t.phase !== 'paused') { played.warning = false; played.danger = false; played.tick = null; }
+      return;
+    }
+    const soundOn = st.soundEnabled !== false;
+    if (t.level === 'normal') { played.warning = false; played.danger = false; }
+    if (t.level === 'warning') played.danger = false;
+    if (t.level === 'warning' && !played.warning) {
+      played.warning = true;
+      if (soundOn && st.warningSound !== false) Sound.warning();
+    }
+    if (t.level === 'danger' && !played.danger) {
+      played.danger = true;
+      played.warning = true;
+      if (soundOn && st.warningSound !== false) Sound.warning();
+    }
+    if (t.total > 0 && t.total <= 10 && t.total !== played.tick) {
+      played.tick = t.total;
+      if (soundOn && st.tickSound) Sound.tick(t.total);
     }
   }
 
-  let lastAnnouncementId = null;
+  function update() {
+    if (!st) return;
+    const now = clock.now();
+    const t = computeTimer(st, now);
+
+    if (t.phase !== view.phase) {
+      const previous = view.phase;
+      view.phase = t.phase;
+      setClassGroup('phase-', t.phase);
+      if (t.phase === 'finished') showFinish();
+      else if (previous === 'finished') hideFinish();
+      view.text = null;
+    }
+    if (t.level !== view.level) {
+      view.level = t.level;
+      setClassGroup('level-', t.level);
+    }
+    if (t.color !== view.color) {
+      view.color = t.color;
+      root.style.setProperty('--accent', t.color);
+    }
+    Dust.mood(t);
+
+    const key = formatTime(t.remaining) + (t.duration >= 3600000 ? 'H' : '');
+    if (key !== view.text) {
+      renderTime(t, view.text !== null && t.phase === 'running');
+      view.text = key;
+    }
+    setProgress(t.progress);
+
+    // Warning pill
+    let message = '';
+    if (t.phase === 'running') {
+      if (t.level === 'danger') message = st.dangerMessage ?? 'OSTATNIE SEKUNDY!';
+      else if (t.level === 'warning') message = st.warningMessage ?? 'CZAS SIĘ KOŃCZY';
+    }
+    if (changed('warning', message)) {
+      if (message) {
+        $('warningText').textContent = message;
+        $('warningLabel').classList.toggle('ext', NON_ASCII.test(message));
+      }
+      $('warningLabel').classList.toggle('show', !!message);
+    }
+
+    // Final 10 seconds
+    const final = st.finalCountdown !== false && t.phase === 'running' && t.total > 0 && t.total <= 10;
+    if (final !== view.final) {
+      view.final = final;
+      body.classList.toggle('final', final);
+      if (!final) view.finalNum = null;
+    }
+    if (final && t.total !== view.finalNum) {
+      view.finalNum = t.total;
+      showFinalNumber(t.total);
+    }
+
+    setLabelText(t.phase === 'paused' ? (st.pauseMessage || 'PAUZA') : (st.timerLabel || ''));
+    playSounds(t);
+
+    if (st.showClock) {
+      const d = new Date(now);
+      const text = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      if (changed('clockText', text)) $('clockChip').textContent = text;
+    }
+    if (changed('audioChip', !PREVIEW && st.soundEnabled !== false && !Sound.unlocked)) {
+      $('audioChip').classList.toggle('show', memo.get('audioChip'));
+    }
+  }
+
+  function applyState() {
+    applyBackground();
+    if (changed('glow', st.timerGlowStyle)) setClassGroup('glow-', st.timerGlowStyle || 'neon');
+    root.style.setProperty('--glow-color1', st.glowColor1 || '#00ff88');
+    root.style.setProperty('--glow-color2', st.glowColor2 || '#0088ff');
+    if (changed('style', st.timerDisplayStyle)) switchTimerStyle(st.timerDisplayStyle);
+    if (changed('ring', st.ringVariant)) applyRingVariant(st.ringVariant || 'classic');
+    applyLabelStyle();
+    $('timerBarContainer').hidden = st.showTimerBar === false;
+    $('clockChip').classList.toggle('show', !!st.showClock);
+    applyOverlay();
+    applyAnnouncement();
+    applyFinishContent();
+    update();
+  }
+
+  let lastFrame = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+    update();
+    const accent = view.color || '#00ff88';
+    Dust.step(dt, now / 1000, accent);
+    Fireworks.step(dt, now, accent);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  // rAF stops in hidden tabs; keep sounds and state flowing anyway
+  setInterval(() => { if (document.hidden) update(); }, 250);
+
+  // ============================================================
+  //  Socket
+  // ============================================================
+  let offlineTimer = null;
+  socket.on('connect', () => {
+    socket.emit('register', PREVIEW ? 'preview' : 'display');
+    clearTimeout(offlineTimer);
+    $('offlineChip').classList.remove('show');
+  });
+  socket.on('disconnect', () => {
+    clearTimeout(offlineTimer);
+    offlineTimer = setTimeout(() => $('offlineChip').classList.add('show'), 2500);
+  });
+
   socket.on('state-sync', (state) => {
-    currentState = state;
-    window._currentState = state;
-    updateDisplay();
-
-    if (state.announcement && state.announcement.id !== lastAnnouncementId) {
-      lastAnnouncementId = state.announcement ? state.announcement.id : null;
-      updateAnnouncement();
-    } else if (!state.announcement) {
-      lastAnnouncementId = null;
-      updateAnnouncement();
-    }
+    clock.hint(state.serverNow);
+    st = state;
+    applyState();
   });
 
-  // Update every 100ms for smooth countdown
-  setInterval(updateDisplay, 100);
-
-  // Auto fullscreen + audio on first click/touch anywhere
-  function enterFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
-    getAudioCtx();
-  }
-  document.addEventListener('click', enterFullscreen, { once: true });
-  document.addEventListener('touchstart', enterFullscreen, { once: true });
-
-  // Wake Lock - prevent screen from sleeping
-  let wakeLock = null;
-  async function requestWakeLock() {
-    try {
-      if ('wakeLock' in navigator) {
-        wakeLock = await navigator.wakeLock.request('screen');
-        wakeLock.addEventListener('release', () => { wakeLock = null; });
+  socket.on('fx', ({ type }) => {
+    if (type === 'celebrate') Fireworks.start(5500);
+    if (type === 'test-sound') {
+      Sound.test();
+      if (!PREVIEW && !Sound.unlocked) {
+        $('audioChip').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 400, iterations: 3 });
       }
-    } catch(e) {}
-  }
-  requestWakeLock();
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') requestWakeLock();
+    }
   });
+
+  // ============================================================
+  //  Fullscreen, audio unlock, wake lock
+  // ============================================================
+  if (!PREVIEW) {
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      else document.exitFullscreen().catch(() => {});
+    }
+    document.addEventListener('pointerdown', () => {
+      Sound.unlock();
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    }, { once: true });
+    document.addEventListener('pointerdown', () => Sound.unlock());
+    document.addEventListener('dblclick', toggleFullscreen);
+    document.addEventListener('keydown', (e) => {
+      Sound.unlock();
+      if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    });
+    Sound.unlock(); // works right away when the browser allows autoplay (kiosk mode)
+    setTimeout(() => $('audioChip').classList.add('dim'), 10000);
+
+    // Wake Lock - prevent screen from sleeping
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
+      } catch (e) {}
+    }
+    requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    });
+  }
+})();
 </script>
 </body>
 </html>
-//michał jaskan
+<!-- michał jaskan -->

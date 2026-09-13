@@ -3,247 +3,392 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#05050c">
 <title>Hackathon Timer</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  @property --accent { syntax: '<color>'; inherits: true; initial-value: #00ff88; }
+
+  :root {
+    --accent: #00ff88;
+    --blue: #648cff;
+    --bg: #05050c;
+    --ui: 'Chakra Petch', 'Rajdhani', system-ui, sans-serif;
+    --digits: 'Orbitron', 'Chakra Petch', monospace;
+    transition: --accent 0.9s ease;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  [hidden] { display: none !important; }
 
   body {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
-    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    font-family: 'Rajdhani', system-ui, sans-serif;
     color: #fff;
-    overflow: hidden;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .bg-grid {
-    position: fixed;
-    inset: 0;
+  /* === SCENE === */
+  .scene { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+  .glow {
+    position: absolute;
+    width: 80vmax; height: 80vmax;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 60%);
+    animation: drift 30s ease-in-out infinite alternate;
+  }
+  .glow.g1 { top: -45vmax; left: -25vmax; }
+  .glow.g2 {
+    bottom: -50vmax; right: -30vmax;
+    background: radial-gradient(circle, rgba(100,140,255,0.16) 0%, transparent 60%);
+    animation-duration: 38s;
+    animation-direction: alternate-reverse;
+  }
+  @keyframes drift { to { transform: translate(12vw, 10vh) scale(1.15); } }
+
+  .floor {
+    position: absolute;
+    left: -50%; right: -50%;
+    bottom: -10vh;
+    height: 70vh;
+    transform: perspective(420px) rotateX(62deg);
+    transform-origin: 50% 100%;
     background-image:
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
+      linear-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: floorMove 3s linear infinite;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 85%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 85%);
+    opacity: 0.55;
+  }
+  @keyframes floorMove { to { background-position: 0 60px; } }
+
+  .horizon {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 58vh;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+    box-shadow: 0 0 40px 6px color-mix(in srgb, var(--accent) 25%, transparent);
+    opacity: 0.6;
   }
 
+  /* === CONTENT === */
   .container {
     position: relative;
     z-index: 1;
-    text-align: center;
     width: 100%;
-    max-width: 480px;
-    padding: 20px;
+    max-width: 760px;
+    padding: 48px 20px;
+    text-align: center;
   }
 
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+    font-family: var(--ui);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 28px;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .live.ready { opacity: 1; transform: none; }
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  .live.running .live-dot { animation: blink 1.4s ease-in-out infinite; }
+  .live-time {
+    font-family: var(--digits);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  @keyframes blink { 50% { opacity: 0.25; } }
+
   .title {
-    font-family: 'Orbitron', monospace;
-    font-size: clamp(28px, 6vw, 42px);
+    font-family: var(--digits);
     font-weight: 900;
-    letter-spacing: 0.1em;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, #00ff88, #00cc66);
+    font-size: clamp(38px, 9.5vw, 88px);
+    line-height: 0.95;
+    letter-spacing: 0.06em;
+    background: linear-gradient(100deg, #fff 0%, #fff 35%, var(--accent) 50%, #fff 65%, #fff 100%);
+    background-size: 250% 100%;
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 6s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px color-mix(in srgb, var(--accent) 30%, transparent));
+  }
+  @keyframes shimmer { 0% { background-position: 100% 0; } 60%, 100% { background-position: 0% 0; } }
+
+  .title-sub {
+    display: block;
+    font-size: 0.42em;
+    letter-spacing: 0.62em;
+    text-indent: 0.62em;
+    margin-top: 0.35em;
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 1px color-mix(in srgb, var(--accent) 80%, transparent);
   }
 
   .subtitle {
-    font-size: 14px;
-    color: rgba(255,255,255,0.4);
+    font-family: var(--ui);
+    font-size: 15px;
+    color: rgba(255,255,255,0.45);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    margin-bottom: 48px;
+    margin: 22px 0 44px;
   }
 
   .cards {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
-    justify-content: center;
   }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
 
   .card {
-    flex: 1;
-    max-width: 200px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
-    padding: 32px 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    color: #fff;
+    --tone: var(--accent);
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 16px;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 26px 24px 24px;
+    text-align: left;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.09);
+    background:
+      radial-gradient(420px circle at var(--mx) var(--my), color-mix(in srgb, var(--tone) 14%, transparent), transparent 45%),
+      linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015));
+    backdrop-filter: blur(14px);
+    cursor: pointer;
+    transition: transform 0.35s cubic-bezier(.2,.8,.2,1), border-color 0.35s ease, box-shadow 0.35s ease;
+    font: inherit;
   }
-
-  .card:hover {
-    background: rgba(255,255,255,0.08);
-    border-color: rgba(255,255,255,0.2);
+  .card:hover, .card:focus-visible {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    border-color: color-mix(in srgb, var(--tone) 45%, transparent);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 40px color-mix(in srgb, var(--tone) 14%, transparent);
+    outline: none;
   }
+  .card-panel { --tone: var(--blue); }
 
   .card-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--tone) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+    color: var(--tone);
   }
-
-  .card-icon svg {
-    width: 32px;
-    height: 32px;
-  }
-
-  .card-display .card-icon {
-    background: rgba(0,255,136,0.1);
-    border: 1px solid rgba(0,255,136,0.2);
-  }
-  .card-display .card-icon svg { stroke: #00ff88; }
-  .card-display:hover {
-    border-color: rgba(0,255,136,0.3);
-    box-shadow: 0 12px 40px rgba(0,255,136,0.1);
-  }
-
-  .card-panel .card-icon {
-    background: rgba(100,140,255,0.1);
-    border: 1px solid rgba(100,140,255,0.2);
-  }
-  .card-panel .card-icon svg { stroke: #648cff; }
-  .card-panel:hover {
-    border-color: rgba(100,140,255,0.3);
-    box-shadow: 0 12px 40px rgba(100,140,255,0.1);
-  }
+  .card-icon svg { width: 26px; height: 26px; }
 
   .card-title {
-    font-family: 'Orbitron', monospace;
-    font-size: 15px;
+    font-family: var(--digits);
+    font-size: 18px;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
+  }
+  .card-desc {
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.35;
+  }
+  .card-arrow {
+    position: absolute;
+    top: 26px; right: 24px;
+    color: rgba(255,255,255,0.3);
+    transition: transform 0.35s ease, color 0.35s ease;
+  }
+  .card:hover .card-arrow { transform: translateX(4px); color: var(--tone); }
+  .card-arrow svg { width: 22px; height: 22px; }
+
+  .foot {
+    margin-top: 36px;
+    font-family: var(--ui);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.28);
+    text-transform: uppercase;
+  }
+  .foot kbd {
+    font-family: inherit;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.5);
   }
 
-  .card-desc {
-    font-size: 12px;
-    color: rgba(255,255,255,0.4);
-    line-height: 1.4;
-  }
+  .i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* === PASSWORD OVERLAY === */
   .overlay {
-    display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(10px);
     z-index: 100;
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 20px;
+    background: rgba(2,2,8,0.72);
+    backdrop-filter: blur(14px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
   }
-  .overlay.visible {
-    display: flex;
-  }
+  .overlay.visible { opacity: 1; visibility: visible; transition: opacity 0.3s ease; }
 
   .password-box {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 16px;
-    padding: 32px;
+    position: relative;
     width: 100%;
-    max-width: 340px;
+    max-width: 380px;
+    padding: 34px 28px 26px;
+    border-radius: 22px;
     text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(180deg, rgba(30,34,70,0.7), rgba(12,12,28,0.85));
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(100,140,255,0.12);
+    transform: translateY(16px) scale(0.97);
+    transition: transform 0.4s cubic-bezier(.2,.9,.3,1.2);
   }
+  .overlay.visible .password-box { transform: none; }
+
+  .lock {
+    width: 58px; height: 58px;
+    margin: 0 auto 16px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    color: var(--blue);
+    background: rgba(100,140,255,0.12);
+    border: 1px solid rgba(100,140,255,0.3);
+  }
+  .lock svg { width: 26px; height: 26px; }
 
   .password-box h2 {
-    font-family: 'Orbitron', monospace;
-    font-size: 18px;
+    font-family: var(--digits);
+    font-size: 17px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.12em;
     margin-bottom: 6px;
-    color: #648cff;
   }
-
   .password-box p {
-    font-size: 13px;
-    color: rgba(255,255,255,0.4);
-    margin-bottom: 24px;
+    font-family: var(--ui);
+    font-size: 14px;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 22px;
   }
 
+  .field { position: relative; }
   .password-input {
     width: 100%;
-    padding: 14px 18px;
+    padding: 15px 52px 15px 18px;
     background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
     color: #fff;
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--ui);
     font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-align: center;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     outline: none;
-    transition: border-color 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s;
   }
-  .password-input:focus {
-    border-color: #648cff;
-    box-shadow: 0 0 20px rgba(100,140,255,0.15);
-  }
-  .password-input.error {
-    border-color: #ff4444;
-    animation: shake 0.4s ease;
-  }
-
+  .password-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(100,140,255,0.15); }
+  .password-input.error { border-color: #ff4466; animation: shake 0.4s ease; }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-8px); }
     40%, 80% { transform: translateX(8px); }
   }
+  .eye {
+    position: absolute;
+    top: 50%; right: 8px;
+    transform: translateY(-50%);
+    width: 38px; height: 38px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255,255,255,0.45);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .eye:hover { color: #fff; background: rgba(255,255,255,0.06); }
+  .eye svg { width: 20px; height: 20px; }
 
   .password-btn {
     width: 100%;
     margin-top: 14px;
-    padding: 14px;
-    background: linear-gradient(135deg, #648cff, #4466dd);
+    padding: 15px;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #7c9dff, #4466dd);
     color: #fff;
-    font-family: 'Orbitron', monospace;
+    font-family: var(--digits);
     font-size: 14px;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.14em;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: transform 0.2s, box-shadow 0.3s, opacity 0.2s;
   }
-  .password-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(100,140,255,0.3);
-  }
+  .password-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(100,140,255,0.35); }
+  .password-btn:disabled { opacity: 0.6; transform: none; cursor: progress; }
 
   .error-msg {
-    color: #ff4444;
-    font-size: 13px;
+    font-family: var(--ui);
+    color: #ff5c7a;
+    font-size: 14px;
     margin-top: 12px;
     min-height: 20px;
   }
 
   .close-btn {
     position: absolute;
-    top: 16px;
-    right: 20px;
-    background: none;
-    border: none;
+    top: 12px; right: 12px;
+    width: 36px; height: 36px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
     color: rgba(255,255,255,0.4);
-    font-size: 28px;
     cursor: pointer;
-    transition: color 0.2s;
+    display: grid;
+    place-items: center;
   }
-  .close-btn:hover { color: #fff; }
+  .close-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+  .close-btn svg { width: 20px; height: 20px; }
 
   .ban-overlay {
     display: none;
@@ -254,109 +399,209 @@
     align-items: center;
     justify-content: center;
   }
-  .ban-overlay.visible {
-    display: flex;
-  }
-  .ban-overlay img {
-    max-width: 80vw;
-    max-height: 80vh;
-    object-fit: contain;
+  .ban-overlay.visible { display: flex; }
+  .ban-overlay img { max-width: 80vw; max-height: 80vh; object-fit: contain; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glow, .floor, .title { animation: none; }
   }
 </style>
 </head>
 <body>
 
-<div class="bg-grid"></div>
-
-  <div class="cards">
-    <a class="card card-display" href="#" onclick="goDisplay(); return false;">
-      <div class="card-title">DISPLAY</div>
-    </a>
-
-    <a class="card card-panel" href="#" onclick="showPasswordPrompt(); return false;">
-      <div class="card-title">PANEL</div>
-    </a>
-  </div>
+<div class="scene" aria-hidden="true">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+  <div class="horizon"></div>
+  <div class="floor"></div>
 </div>
 
-<!-- PASSWORD OVERLAY -->
-<div class="overlay" id="passwordOverlay">
-  <button class="close-btn" onclick="closePassword()">&times;</button>
-  <div class="password-box">
-    <input type="password" class="password-input" id="passwordInput" placeholder="Haslo..." autofocus>
-    <button class="password-btn" onclick="checkPassword()">WEJDZ</button>
-    <div class="error-msg" id="errorMsg"></div>
+<main class="container">
+  <div class="live" id="live">
+    <span class="live-dot"></span>
+    <span id="liveLabel">Łączenie…</span>
+    <span class="live-time" id="liveTime" hidden></span>
   </div>
+
+  <h1 class="title">HACKATHON<span class="title-sub">TIMER</span></h1>
+  <p class="subtitle">Odliczanie na projektorze · sterowanie z telefonu</p>
+
+  <div class="cards">
+    <a class="card card-display" href="/display.html">
+      <span class="card-arrow"><svg class="i" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      <span class="card-icon"><svg class="i" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+      <span class="card-title">DISPLAY</span>
+      <span class="card-desc">Ekran projektora — pełny ekran, dźwięki i efekty</span>
+    </a>
+
+    <button class="card card-panel" type="button" id="panelCard">
+      <span class="card-arrow"><svg class="i" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      <span class="card-icon"><svg class="i" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>
+      <span class="card-title">PANEL</span>
+      <span class="card-desc">Pilot organizatora — start, pauza, komunikaty, wygląd</span>
+    </button>
+  </div>
+
+  <p class="foot">Na projektorze naciśnij <kbd>F</kbd>, aby włączyć pełny ekran</p>
+</main>
+
+<!-- PASSWORD OVERLAY -->
+<div class="overlay" id="passwordOverlay" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+  <form class="password-box" id="passwordForm">
+    <button class="close-btn" type="button" id="closeBtn" aria-label="Zamknij">
+      <svg class="i" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="lock"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <h2 id="pwTitle">PANEL ORGANIZATORA</h2>
+    <p>Wpisz hasło, aby sterować timerem</p>
+    <div class="field">
+      <input type="password" class="password-input" id="passwordInput" placeholder="Hasło…" autocomplete="current-password" required>
+      <button class="eye" type="button" id="eyeBtn" aria-label="Pokaż hasło">
+        <svg class="i" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <button class="password-btn" type="submit" id="passwordBtn">WEJDŹ</button>
+    <div class="error-msg" id="errorMsg" role="alert"></div>
+  </form>
 </div>
 
 <div class="ban-overlay" id="banOverlay">
   <img src="/ban.png" alt="BANNED">
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
 <script>
-  function goDisplay() {
-    window.location.href = '/display.html';
+  const $ = (id) => document.getElementById(id);
+  const overlay = $('passwordOverlay');
+  const input = $('passwordInput');
+  const btn = $('passwordBtn');
+  const error = $('errorMsg');
+
+  function readToken() {
+    try { return localStorage.getItem('panelToken'); } catch (e) { return null; }
+  }
+
+  // === PANEL ENTRY ===
+  async function openPanel() {
+    const token = readToken();
+    if (token) {
+      try {
+        const res = await fetch('/api/session', { headers: { Authorization: 'Bearer ' + token } });
+        if (res.ok) { location.href = '/remote.html'; return; }
+      } catch (e) {}
+    }
+    showPasswordPrompt();
   }
 
   function showPasswordPrompt() {
-    document.getElementById('passwordOverlay').classList.add('visible');
-    document.getElementById('passwordInput').value = '';
-    document.getElementById('errorMsg').textContent = '';
-    document.getElementById('passwordInput').classList.remove('error');
-    setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+    overlay.classList.add('visible');
+    input.value = '';
+    error.textContent = '';
+    input.classList.remove('error');
+    setTimeout(() => input.focus(), 80);
   }
 
   function closePassword() {
-    document.getElementById('passwordOverlay').classList.remove('visible');
+    overlay.classList.remove('visible');
   }
 
-  function checkPassword() {
-    const input = document.getElementById('passwordInput');
-    const error = document.getElementById('errorMsg');
-    const btn = document.querySelector('.password-btn');
-    btn.disabled = true;
-    btn.textContent = '...';
+  function resetButton() {
+    btn.disabled = false;
+    btn.textContent = 'WEJDŹ';
+  }
 
-    fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: input.value }),
-    })
-    .then(r => r.json().then(data => ({ ok: r.ok, data })))
-    .then(({ ok, data }) => {
-      if (ok && data.ok) {
-        window.location.href = '/remote.html';
-      } else {
-        input.classList.add('error');
-        error.textContent = 'Bledne haslo';
-        setTimeout(() => input.classList.remove('error'), 400);
-        input.value = '';
-        btn.disabled = false;
-        btn.textContent = 'WEJDZ';
-        document.getElementById('banOverlay').classList.add('visible');
+  async function checkPassword(e) {
+    e.preventDefault();
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: input.value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        try { localStorage.setItem('panelToken', data.token); } catch (err) {}
+        btn.textContent = '✓';
+        location.href = '/remote.html';
+        return;
+      }
+      input.classList.add('error');
+      error.textContent = data.error || 'Błędne hasło';
+      setTimeout(() => input.classList.remove('error'), 400);
+      input.value = '';
+      resetButton();
+      if (res.status === 401) {
+        $('banOverlay').classList.add('visible');
         setTimeout(() => {
-          document.getElementById('banOverlay').classList.remove('visible');
+          $('banOverlay').classList.remove('visible');
           input.focus();
         }, 2000);
       }
-    })
-    .catch(() => {
-      error.textContent = 'Blad polaczenia';
-      btn.disabled = false;
-      btn.textContent = 'WEJDZ';
-    });
+    } catch (err) {
+      error.textContent = 'Błąd połączenia z serwerem';
+      resetButton();
+    }
   }
 
-  // Enter key support
-  document.getElementById('passwordInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') checkPassword();
+  $('panelCard').addEventListener('click', openPanel);
+  $('passwordForm').addEventListener('submit', checkPassword);
+  $('closeBtn').addEventListener('click', closePassword);
+  $('eyeBtn').addEventListener('click', () => {
+    input.type = input.type === 'password' ? 'text' : 'password';
+    input.focus();
+  });
+  document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePassword();
   });
-
-  // Close overlay on backdrop click
-  document.getElementById('passwordOverlay').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('passwordOverlay')) closePassword();
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closePassword();
   });
+
+  if (new URLSearchParams(location.search).has('login')) {
+    history.replaceState(null, '', '/');
+    showPasswordPrompt();
+  }
+
+  // === SPOTLIGHT ON CARDS ===
+  document.querySelectorAll('.card').forEach((card) => {
+    card.addEventListener('pointermove', (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      card.style.setProperty('--my', `${e.clientY - r.top}px`);
+    });
+  });
+
+  // === LIVE STATUS ===
+  const socket = io();
+  const clock = TimerCore.createClock(socket);
+  let st = null;
+
+  socket.on('connect', () => socket.emit('register', 'viewer'));
+  socket.on('disconnect', () => {
+    $('liveLabel').textContent = 'Serwer offline';
+    $('liveTime').hidden = true;
+  });
+  socket.on('state-sync', (state) => {
+    clock.hint(state.serverNow);
+    st = state;
+    renderLive();
+  });
+
+  function renderLive() {
+    if (!st || !socket.connected) return;
+    const t = TimerCore.computeTimer(st, clock.now());
+    const labels = { idle: 'Timer gotowy', running: 'Do końca', paused: 'Pauza', finished: 'Czas minął' };
+    $('live').className = 'live ready ' + t.phase;
+    document.documentElement.style.setProperty('--accent', t.color);
+    $('liveLabel').textContent = labels[t.phase];
+    const showTime = t.phase === 'running' || t.phase === 'paused';
+    $('liveTime').hidden = !showTime;
+    if (showTime) $('liveTime').textContent = TimerCore.formatTime(t.remaining);
+  }
+  setInterval(renderLive, 200);
 </script>
 </body>
 </html>

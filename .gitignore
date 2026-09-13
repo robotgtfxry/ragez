@@ -1,2 +1,4 @@
 /timer/node_modules/
+/timer/data/
+/timer/logs/
 /.idea
