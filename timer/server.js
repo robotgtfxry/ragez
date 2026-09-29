@@ -381,14 +381,16 @@ app.get('/status', (req, res) => {
 
 function getNetworkIP() {
   const interfaces = os.networkInterfaces();
+  let fallback = null;
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
-      }
+      if (iface.family !== 'IPv4' || iface.internal) continue;
+      // 169.254.x.x = brak DHCP, inne urządzenia tego adresu nie widzą
+      if (iface.address.startsWith('169.254.')) { fallback = fallback || iface.address; continue; }
+      return iface.address;
     }
   }
-  return 'localhost';
+  return fallback || 'localhost';
 }
 
 function broadcastConnections() {
